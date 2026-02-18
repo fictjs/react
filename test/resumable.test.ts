@@ -17,6 +17,23 @@ const tick = async (ms = 0) => {
   await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+const waitForElement = async <T extends Element>(
+  root: ParentNode,
+  selector: string,
+  timeoutMs = 1_000,
+): Promise<T> => {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const element = root.querySelector(selector)
+    if (element) {
+      return element as T
+    }
+    await tick(10)
+  }
+
+  throw new Error(`Timed out waiting for selector: ${selector}`)
+}
+
 afterEach(() => {
   const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
   runtimeHost.__FICT_DEV__ = undefined
@@ -131,8 +148,8 @@ describe('reactify$', () => {
       }),
       container,
     )
-    await tick(30)
-    ;(container.querySelector('#action-button') as HTMLButtonElement).click()
+    const actionButton = await waitForElement<HTMLButtonElement>(container, '#action-button')
+    actionButton.click()
     await tick(30)
 
     expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:run'])
@@ -169,8 +186,11 @@ describe('reactify$', () => {
       }),
       container,
     )
-    await tick(30)
-    ;(container.querySelector('#custom-action-button') as HTMLButtonElement).click()
+    const customActionButton = await waitForElement<HTMLButtonElement>(
+      container,
+      '#custom-action-button',
+    )
+    customActionButton.click()
     await tick(30)
 
     expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:option'])
