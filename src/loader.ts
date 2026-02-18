@@ -17,6 +17,17 @@ import { decodePropsFromAttribute } from './serialization'
 import { scheduleByClientDirective } from './strategy'
 import type { ClientDirective } from './types'
 
+const COMPONENT_LOAD_RETRY_BASE_DELAY_MS = 100
+const COMPONENT_LOAD_RETRY_MAX_DELAY_MS = 5_000
+const COMPONENT_LOAD_RETRY_MAX_FAILURES = 5
+
+type ReactComponentModule = Record<string, unknown>
+type ReactComponentModuleLoader = (resolvedUrl: string) => Promise<ReactComponentModule>
+
+const defaultReactComponentModuleLoader: ReactComponentModuleLoader = resolvedUrl =>
+  import(/* @vite-ignore */ resolvedUrl) as Promise<ReactComponentModule>
+let reactComponentModuleLoader = defaultReactComponentModuleLoader
+
 export interface ReactIslandsLoaderOptions {
   document?: Document
   selector?: string
@@ -48,7 +59,7 @@ async function loadComponentFromQrl(
   }
 
   const resolvedUrl = resolveModuleUrl(url)
-  const mod = (await import(/* @vite-ignore */ resolvedUrl)) as Record<string, unknown>
+  const mod = await reactComponentModuleLoader(resolvedUrl)
   const candidate = (mod[exportName] ?? mod.default) as unknown
 
   if (typeof candidate !== 'function') {
@@ -58,6 +69,23 @@ async function loadComponentFromQrl(
   }
 
   return candidate as ComponentType<Record<string, unknown>>
+}
+
+function retryDelayMs(failures: number): number {
+  return Math.min(
+    COMPONENT_LOAD_RETRY_BASE_DELAY_MS * 2 ** Math.max(0, failures - 1),
+    COMPONENT_LOAD_RETRY_MAX_DELAY_MS,
+  )
+}
+
+export function __setLoaderComponentModuleLoaderForTests(
+  loader: ReactComponentModuleLoader | null,
+): void {
+  reactComponentModuleLoader = loader ?? defaultReactComponentModuleLoader
+}
+
+export function __resetLoaderComponentModuleLoaderForTests(): void {
+  reactComponentModuleLoader = defaultReactComponentModuleLoader
 }
 
 function readSerializedProps(host: HTMLElement): Record<string, unknown> {
@@ -108,9 +136,24 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
   let root: MountedReactRoot | null = null
   let component: ComponentType<Record<string, unknown>> | null = null
   let loadPromise: Promise<ComponentType<Record<string, unknown>>> | null = null
+  let loadFailures = 0
+  let nextLoadRetryAt = 0
+  let retryTimer: ReturnType<typeof setTimeout> | null = null
   let mountCleanup: (() => void) | null = null
 
+  const clearRetryTimer = () => {
+    if (retryTimer === null) return
+    clearTimeout(retryTimer)
+    retryTimer = null
+  }
+
   const ensureComponent = async (): Promise<ComponentType<Record<string, unknown>>> => {
+    const now = Date.now()
+    if (nextLoadRetryAt > now) {
+      const waitMs = nextLoadRetryAt - now
+      throw new Error(`[fict/react] React island load cooldown active; retry in ${waitMs}ms.`)
+    }
+
     if (component) {
       return component
     }
@@ -118,10 +161,20 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
       return loadPromise
     }
 
-    loadPromise = loadComponentFromQrl(qrl).then(loaded => {
-      component = loaded
-      return loaded
-    })
+    loadPromise = loadComponentFromQrl(qrl)
+      .then(loaded => {
+        component = loaded
+        loadFailures = 0
+        nextLoadRetryAt = 0
+        loadPromise = null
+        return loaded
+      })
+      .catch(error => {
+        loadPromise = null
+        loadFailures += 1
+        nextLoadRetryAt = Date.now() + retryDelayMs(loadFailures)
+        throw error
+      })
 
     return loadPromise
   }
@@ -135,7 +188,20 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
     void (async () => {
       if (disposed || root) return
 
-      const loaded = await ensureComponent()
+      let loaded: ComponentType<Record<string, unknown>>
+      try {
+        loaded = await ensureComponent()
+      } catch (error) {
+        if (typeof console !== 'undefined' && typeof console.error === 'function') {
+          console.error('[fict/react] Failed to load React island component from loader.', error)
+        }
+        if (!disposed && !root && loadFailures < COMPONENT_LOAD_RETRY_MAX_FAILURES) {
+          const waitMs = Math.max(0, nextLoadRetryAt - Date.now())
+          clearRetryTimer()
+          retryTimer = setTimeout(mount, waitMs)
+        }
+        return
+      }
       if (disposed || root) return
 
       const node = createReactElement(loaded, readRenderableProps(host))
@@ -150,6 +216,7 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
 
       root = mountReactRoot(host, node, mountOptions)
       host.setAttribute(DATA_FICT_REACT_MOUNTED, '1')
+      clearRetryTimer()
     })().catch(error => {
       if (typeof console !== 'undefined' && typeof console.error === 'function') {
         console.error('[fict/react] Failed to mount React island from loader.', error)
@@ -178,6 +245,7 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
       disposed = true
       mountCleanup?.()
       mountCleanup = null
+      clearRetryTimer()
       root?.unmount()
       root = null
       host.removeAttribute(DATA_FICT_REACT_MOUNTED)

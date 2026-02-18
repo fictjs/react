@@ -6,6 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { installReactIslands, reactAction$, reactify$ } from '../src'
 import {
+  __resetLoaderComponentModuleLoaderForTests,
+  __setLoaderComponentModuleLoaderForTests,
+} from '../src/loader'
+import {
   __resetResumableComponentModuleLoaderForTests,
   __setResumableComponentModuleLoaderForTests,
 } from '../src/resumable'
@@ -18,6 +22,7 @@ const tick = async (ms = 0) => {
 afterEach(() => {
   document.body.innerHTML = ''
   __fictDisableSSR()
+  __resetLoaderComponentModuleLoaderForTests()
   __resetResumableComponentModuleLoaderForTests()
 })
 
@@ -348,5 +353,38 @@ describe('installReactIslands', () => {
     expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:loader-option'])
 
     stop()
+  })
+
+  it('loader recovers from transient component load failures with bounded backoff retries', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    let attempts = 0
+
+    __setLoaderComponentModuleLoaderForTests(async resolvedUrl => {
+      attempts += 1
+      if (attempts === 1) {
+        throw new Error('transient-loader-failure')
+      }
+
+      return (await import(/* @vite-ignore */ resolvedUrl)) as Record<string, unknown>
+    })
+
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'retry-loader', count: 9 }))
+    document.body.appendChild(host)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stop = installReactIslands()
+    await tick(20)
+    expect(host.textContent).not.toContain('retry-loader:9')
+
+    await tick(140)
+    expect(attempts).toBe(2)
+    expect(host.textContent).toContain('retry-loader:9')
+
+    stop()
+    consoleSpy.mockRestore()
   })
 })
