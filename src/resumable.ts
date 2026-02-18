@@ -21,6 +21,10 @@ import { encodePropsForAttribute } from './serialization'
 import { scheduleByClientDirective } from './strategy'
 import type { ReactInteropOptions, ReactifyQrlOptions } from './types'
 
+const COMPONENT_LOAD_RETRY_BASE_DELAY_MS = 100
+const COMPONENT_LOAD_RETRY_MAX_DELAY_MS = 5_000
+const COMPONENT_LOAD_RETRY_MAX_FAILURES = 5
+
 interface NormalizedReactInteropOptions {
   client: NonNullable<ReactInteropOptions['client']>
   ssr: boolean
@@ -28,6 +32,13 @@ interface NormalizedReactInteropOptions {
   identifierPrefix: string
   actionProps: string[]
 }
+
+type ReactComponentModule = Record<string, unknown>
+type ReactComponentModuleLoader = (resolvedUrl: string) => Promise<ReactComponentModule>
+
+const defaultReactComponentModuleLoader: ReactComponentModuleLoader = resolvedUrl =>
+  import(/* @vite-ignore */ resolvedUrl) as Promise<ReactComponentModule>
+let reactComponentModuleLoader = defaultReactComponentModuleLoader
 
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
@@ -64,7 +75,7 @@ async function loadComponentFromQrl<P extends Record<string, unknown>>(
   }
 
   const resolvedUrl = resolveModuleUrl(url)
-  const mod = (await import(/* @vite-ignore */ resolvedUrl)) as Record<string, unknown>
+  const mod = await reactComponentModuleLoader(resolvedUrl)
 
   const candidate = (mod[exportName] ?? mod.default) as unknown
   if (typeof candidate !== 'function') {
@@ -76,8 +87,25 @@ async function loadComponentFromQrl<P extends Record<string, unknown>>(
   return candidate as ComponentType<P>
 }
 
+function retryDelayMs(failures: number): number {
+  return Math.min(
+    COMPONENT_LOAD_RETRY_BASE_DELAY_MS * 2 ** Math.max(0, failures - 1),
+    COMPONENT_LOAD_RETRY_MAX_DELAY_MS,
+  )
+}
+
 export function createReactQrl(moduleId: string, exportName = 'default'): string {
   return __fictQrl(moduleId, exportName)
+}
+
+export function __setResumableComponentModuleLoaderForTests(
+  loader: ReactComponentModuleLoader | null,
+): void {
+  reactComponentModuleLoader = loader ?? defaultReactComponentModuleLoader
+}
+
+export function __resetResumableComponentModuleLoaderForTests(): void {
+  reactComponentModuleLoader = defaultReactComponentModuleLoader
 }
 
 export function reactify$<P extends Record<string, unknown>>(
@@ -97,9 +125,24 @@ export function reactify$<P extends Record<string, unknown>>(
 
     let resolvedComponent: ComponentType<P> | null = options.component ?? null
     let loadPromise: Promise<ComponentType<P>> | null = null
+    let loadFailures = 0
+    let nextLoadRetryAt = 0
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
     let latestProps = copyProps(rawProps)
 
+    const clearRetryTimer = () => {
+      if (retryTimer === null) return
+      clearTimeout(retryTimer)
+      retryTimer = null
+    }
+
     const ensureComponent = async (): Promise<ComponentType<P>> => {
+      const now = Date.now()
+      if (nextLoadRetryAt > now) {
+        const waitMs = nextLoadRetryAt - now
+        throw new Error(`[fict/react] React island load cooldown active; retry in ${waitMs}ms.`)
+      }
+
       if (resolvedComponent) {
         return resolvedComponent
       }
@@ -107,10 +150,20 @@ export function reactify$<P extends Record<string, unknown>>(
         return loadPromise
       }
 
-      loadPromise = loadComponentFromQrl<P>(qrl).then(component => {
-        resolvedComponent = component
-        return component
-      })
+      loadPromise = loadComponentFromQrl<P>(qrl)
+        .then(component => {
+          resolvedComponent = component
+          loadFailures = 0
+          nextLoadRetryAt = 0
+          loadPromise = null
+          return component
+        })
+        .catch(error => {
+          loadPromise = null
+          loadFailures += 1
+          nextLoadRetryAt = Date.now() + retryDelayMs(loadFailures)
+          throw error
+        })
 
       return loadPromise
     }
@@ -167,11 +220,29 @@ export function reactify$<P extends Record<string, unknown>>(
         if (__fictIsSSR()) return
         if (!host) return
 
+        const scheduleRetry = (mount: () => void) => {
+          if (!host || !active || root) return
+          if (loadFailures >= COMPONENT_LOAD_RETRY_MAX_FAILURES) return
+
+          const waitMs = Math.max(0, nextLoadRetryAt - Date.now())
+          clearRetryTimer()
+          retryTimer = setTimeout(mount, waitMs)
+        }
+
         const mount = () => {
           void (async () => {
             if (!host || !active || root) return
 
-            const component = await ensureComponent()
+            let component: ComponentType<P>
+            try {
+              component = await ensureComponent()
+            } catch (error) {
+              if (typeof console !== 'undefined' && typeof console.error === 'function') {
+                console.error('[fict/react] Failed to load resumable React island component.', error)
+              }
+              scheduleRetry(mount)
+              return
+            }
             if (!host || !active || root) return
 
             const node = createReactElement(
@@ -189,6 +260,7 @@ export function reactify$<P extends Record<string, unknown>>(
 
             root = mountReactRoot(host, node, mountOptions)
             host.setAttribute(DATA_FICT_REACT_MOUNTED, '1')
+            clearRetryTimer()
           })().catch(error => {
             if (typeof console !== 'undefined' && typeof console.error === 'function') {
               console.error('[fict/react] Failed to mount resumable React island.', error)
@@ -205,6 +277,7 @@ export function reactify$<P extends Record<string, unknown>>(
         active = false
         mountCleanup?.()
         mountCleanup = null
+        clearRetryTimer()
         root?.unmount()
         root = null
 

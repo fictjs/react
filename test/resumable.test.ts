@@ -2,9 +2,13 @@ import { prop, render } from '@fictjs/runtime'
 import { createSignal } from '@fictjs/runtime/advanced'
 import { __fictDisableSSR, __fictEnableSSR } from '@fictjs/runtime/internal'
 import React from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { installReactIslands, reactAction$, reactify$ } from '../src'
+import {
+  __resetResumableComponentModuleLoaderForTests,
+  __setResumableComponentModuleLoaderForTests,
+} from '../src/resumable'
 import { encodePropsForAttribute } from '../src/serialization'
 
 const tick = async (ms = 0) => {
@@ -14,6 +18,7 @@ const tick = async (ms = 0) => {
 afterEach(() => {
   document.body.innerHTML = ''
   __fictDisableSSR()
+  __resetResumableComponentModuleLoaderForTests()
 })
 
 describe('reactify$', () => {
@@ -169,6 +174,41 @@ describe('reactify$', () => {
     expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:option'])
 
     dispose()
+  })
+
+  it('recovers from transient component load failures with bounded backoff retries', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    let attempts = 0
+
+    __setResumableComponentModuleLoaderForTests(async resolvedUrl => {
+      attempts += 1
+      if (attempts === 1) {
+        throw new Error('transient-load-failure')
+      }
+
+      return (await import(/* @vite-ignore */ resolvedUrl)) as Record<string, unknown>
+    })
+
+    const Remote = reactify$<{ label: string; count: number }>({
+      module: fixtureModule,
+      export: 'LoaderComponent',
+      ssr: false,
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dispose = render(() => ({ type: Remote, props: { label: 'retry', count: 7 } }), container)
+    await tick(20)
+    expect(container.textContent).not.toContain('retry:7')
+
+    await tick(140)
+    expect(attempts).toBe(2)
+    expect(container.textContent).toContain('retry:7')
+
+    dispose()
+    consoleSpy.mockRestore()
   })
 })
 
