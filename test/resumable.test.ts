@@ -153,4 +153,25 @@ describe('installReactIslands', () => {
 
     stop()
   })
+
+  it('rebuilds island runtime when qrl attribute changes', async () => {
+    const moduleA = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const moduleB = new URL('./fixtures/loader-component-alt.ts', import.meta.url).href
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${moduleA}#LoaderComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'switch', count: 1 }))
+    document.body.appendChild(host)
+
+    const stop = installReactIslands()
+    await tick(30)
+    expect(host.textContent).toContain('switch:1')
+
+    host.setAttribute('data-fict-react', `${moduleB}#LoaderComponentAlt`)
+    await tick(30)
+    expect(host.textContent).toContain('ALT-switch:1')
+
+    stop()
+  })
 })

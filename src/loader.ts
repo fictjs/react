@@ -227,7 +227,8 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
           }
 
           if (mutation.attributeName === DATA_FICT_REACT_QRL) {
-            if (!runtimes.has(target) && target.matches(options.selector)) {
+            disposeHost(target)
+            if (target.matches(options.selector) && target.getAttribute(DATA_FICT_REACT_QRL)) {
               mountHost(target)
             }
           }
