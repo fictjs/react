@@ -167,13 +167,15 @@ describe('reactify$', () => {
       }),
       container,
     )
-    const actionButton = await waitForElement<HTMLButtonElement>(container, '#action-button')
-    actionButton.click()
-    await tick(30)
-
-    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:run'])
-
-    dispose()
+    try {
+      const actionButton = await waitForElement<HTMLButtonElement>(container, '#action-button')
+      actionButton.click()
+      await waitForExpectation(() => {
+        expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:run'])
+      })
+    } finally {
+      dispose()
+    }
   })
 
   it('materializes configured non-onX action props from reactify$ options', async () => {
@@ -205,16 +207,18 @@ describe('reactify$', () => {
       }),
       container,
     )
-    const customActionButton = await waitForElement<HTMLButtonElement>(
-      container,
-      '#custom-action-button',
-    )
-    customActionButton.click()
-    await tick(30)
-
-    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:option'])
-
-    dispose()
+    try {
+      const customActionButton = await waitForElement<HTMLButtonElement>(
+        container,
+        '#custom-action-button',
+      )
+      customActionButton.click()
+      await waitForExpectation(() => {
+        expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:option'])
+      })
+    } finally {
+      dispose()
+    }
   })
 
   it('recovers from transient component load failures with bounded backoff retries', async () => {
@@ -403,13 +407,15 @@ describe('installReactIslands', () => {
     document.body.appendChild(host)
 
     const stop = installReactIslands()
-    await tick(30)
-    ;(host.querySelector('#action-button') as HTMLButtonElement).click()
-    await tick(30)
-
-    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:loader'])
-
-    stop()
+    try {
+      await tick(30)
+      ;(host.querySelector('#action-button') as HTMLButtonElement).click()
+      await waitForExpectation(() => {
+        expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:loader'])
+      })
+    } finally {
+      stop()
+    }
   })
 
   it('loader materializes configured non-onX action props from host attributes', async () => {
@@ -436,13 +442,15 @@ describe('installReactIslands', () => {
     document.body.appendChild(host)
 
     const stop = installReactIslands()
-    await tick(30)
-    ;(host.querySelector('#custom-action-button') as HTMLButtonElement).click()
-    await tick(30)
-
-    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:loader-option'])
-
-    stop()
+    try {
+      await tick(30)
+      ;(host.querySelector('#custom-action-button') as HTMLButtonElement).click()
+      await waitForExpectation(() => {
+        expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:loader-option'])
+      })
+    } finally {
+      stop()
+    }
   })
 
   it('loader recovers from transient component load failures with bounded backoff retries', async () => {
