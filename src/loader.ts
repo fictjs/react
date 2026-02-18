@@ -36,6 +36,20 @@ interface IslandRuntime {
 }
 
 function isDevRuntime(): boolean {
+  const host = globalThis as Record<string, unknown>
+  const explicitDevFlag = host.__FICT_DEV__
+  if (typeof explicitDevFlag === 'boolean') {
+    return explicitDevFlag
+  }
+
+  const metaEnv = (import.meta as unknown as { env?: Record<string, unknown> }).env
+  if (metaEnv && typeof metaEnv.DEV === 'boolean') {
+    return metaEnv.DEV
+  }
+  if (metaEnv && typeof metaEnv.MODE === 'string') {
+    return metaEnv.MODE !== 'production'
+  }
+
   if (typeof process === 'undefined') return false
   const nodeEnv = process.env?.NODE_ENV
   if (!nodeEnv) return false

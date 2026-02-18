@@ -18,6 +18,8 @@ const tick = async (ms = 0) => {
 }
 
 afterEach(() => {
+  const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
+  runtimeHost.__FICT_DEV__ = undefined
   document.body.innerHTML = ''
   __fictDisableSSR()
   __resetLoaderComponentModuleLoaderForTests()
@@ -395,21 +397,28 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'warn', count: 1 }))
     document.body.appendChild(host)
 
+    const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
+    const originalDevFlag = runtimeHost.__FICT_DEV__
+    runtimeHost.__FICT_DEV__ = true
+
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const stop = installReactIslands()
-    await tick(30)
+    try {
+      await tick(30)
 
-    host.setAttribute('data-fict-react-client', 'idle')
-    host.setAttribute('data-fict-react-client', 'visible')
-    host.setAttribute('data-fict-react-ssr', '1')
-    host.setAttribute('data-fict-react-prefix', 'changed')
-    host.setAttribute('data-fict-react-prefix', 'changed-again')
-    await tick(30)
+      host.setAttribute('data-fict-react-client', 'idle')
+      host.setAttribute('data-fict-react-client', 'visible')
+      host.setAttribute('data-fict-react-ssr', '1')
+      host.setAttribute('data-fict-react-prefix', 'changed')
+      host.setAttribute('data-fict-react-prefix', 'changed-again')
+      await tick(30)
 
-    expect(warnSpy).toHaveBeenCalledTimes(3)
-
-    stop()
-    warnSpy.mockRestore()
+      expect(warnSpy).toHaveBeenCalledTimes(3)
+    } finally {
+      stop()
+      warnSpy.mockRestore()
+      runtimeHost.__FICT_DEV__ = originalDevFlag
+    }
   })
 
   it('does not warn for immutable host attribute mutation in production runtime', async () => {
@@ -421,8 +430,9 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'silent', count: 2 }))
     document.body.appendChild(host)
 
-    const originalNodeEnv = process.env.NODE_ENV
-    process.env.NODE_ENV = 'production'
+    const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
+    const originalDevFlag = runtimeHost.__FICT_DEV__
+    runtimeHost.__FICT_DEV__ = false
 
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const stop = installReactIslands()
@@ -438,7 +448,7 @@ describe('installReactIslands', () => {
     } finally {
       stop()
       warnSpy.mockRestore()
-      process.env.NODE_ENV = originalNodeEnv
+      runtimeHost.__FICT_DEV__ = originalDevFlag
     }
   })
 })
