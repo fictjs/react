@@ -1,15 +1,38 @@
-import react from '@vitejs/plugin-react'
+import react, { type Options as ReactPluginOptions } from '@vitejs/plugin-react'
 import type { PluginOption } from 'vite'
 
 export interface FictReactPresetOptions {
-  include?: RegExp | RegExp[]
+  /**
+   * React transform include filter. Keep it narrow so Fict TSX can use Fict compiler/runtime.
+   * @default [/src\/react\/.*\.[jt]sx?$/]
+   */
+  include?: ReactPluginOptions['include']
+  /**
+   * Optional exclude filter for React transform.
+   */
+  exclude?: ReactPluginOptions['exclude']
+  /**
+   * Additional @vitejs/plugin-react options.
+   * `include` and `exclude` are controlled by this preset.
+   */
+  react?: Omit<ReactPluginOptions, 'include' | 'exclude'>
 }
 
 /**
- * Lightweight preset for routing React files through @vitejs/plugin-react.
- * Full dual-runtime preset behavior is implemented in a later feature commit.
+ * Configure React transform as an island lane inside a Fict project.
+ * Usage:
+ * - Put React files in src/react/** (default include)
+ * - Keep Fict files outside that lane
  */
 export function fictReactPreset(options: FictReactPresetOptions = {}): PluginOption[] {
-  const include = options.include ?? [/src\/react\/.*\.[jt]sx?$/]
-  return [react({ include })]
+  const reactOptions: ReactPluginOptions = {
+    ...(options.react ?? {}),
+    include: options.include ?? [/src\/react\/.*\.[jt]sx?$/],
+  }
+
+  if (options.exclude !== undefined) {
+    reactOptions.exclude = options.exclude
+  }
+
+  return [react(reactOptions)]
 }
