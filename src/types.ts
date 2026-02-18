@@ -27,6 +27,23 @@ export interface ReactInteropOptions {
 
 export type MaybeAccessor<T> = T | (() => T)
 
+export interface ReactifyQrlOptions<P extends Record<string, unknown>> extends ReactInteropOptions {
+  /**
+   * Module id used by __fictQrl, usually import.meta.url.
+   */
+  module: string
+  /**
+   * Export name in the target module.
+   * @default 'default'
+   */
+  export?: string
+  /**
+   * Optional direct component reference used for eager CSR and SSR.
+   * If omitted, client will lazy-import via QRL.
+   */
+  component?: ComponentType<P>
+}
+
 export interface ReactIslandProps<P extends Record<string, unknown>>
   extends BaseProps,
     ReactInteropOptions {
