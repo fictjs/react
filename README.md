@@ -120,6 +120,7 @@ export const LazyChart = reactify$({
 The component module is loaded only when the client strategy fires. On the server the optional `component` reference is used for SSR; on the client the QRL triggers a dynamic import.
 
 Serialized props are written to `data-fict-react-props` on the host element, making the island fully resumable from server-rendered HTML.
+If lazy module loading fails transiently, `reactify$` retries with bounded exponential backoff (base 100ms, capped at 5s, max 5 failures).
 
 ### 5. Static Islands (Loader)
 
@@ -150,6 +151,7 @@ const cleanup = installReactIslands({
 ```
 
 The loader uses `MutationObserver` to detect new island hosts and attribute changes. Updating `data-fict-react-props` on a mounted host triggers a React re-render. Changing the QRL (`data-fict-react`) disposes the old root and mounts a fresh one.
+When component module loading fails transiently, the loader also retries with the same bounded exponential backoff policy.
 
 ### 6. Serializable Actions
 
