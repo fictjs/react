@@ -6,8 +6,10 @@
     "access": "public",
     "provenance": true
   },
-  "license": "MIT",
-  "author": "unadlib",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fictjs/react.git"
+  },
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
@@ -86,5 +88,11 @@
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.1.1"
+  "packageManager": "pnpm@9.1.1",
+  "keywords": [
+    "fict",
+    "react"
+  ],
+  "license": "MIT",
+  "author": "unadlib"
 }
