@@ -23,10 +23,30 @@ const COMPONENT_LOAD_RETRY_MAX_DELAY_MS = 5_000
 const COMPONENT_LOAD_RETRY_MAX_FAILURES = 5
 
 export interface ReactIslandsLoaderOptions {
+  /**
+   * Document to scan and observe.
+   * @default global document
+   */
   document?: Document
+  /**
+   * CSS selector used to find island hosts.
+   * @default '[data-fict-react]'
+   */
   selector?: string
+  /**
+   * Enable MutationObserver to auto-mount/dispose and refresh.
+   * @default true
+   */
   observe?: boolean
+  /**
+   * Fallback client directive when host attribute is missing or invalid.
+   * @default 'load'
+   */
   defaultClient?: ClientDirective
+  /**
+   * Root margin used by visible strategy observers.
+   * @default '200px'
+   */
   visibleRootMargin?: string
 }
 

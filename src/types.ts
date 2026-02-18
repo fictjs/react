@@ -1,6 +1,9 @@
 import type { BaseProps } from '@fictjs/runtime'
 import type { ComponentType } from 'react'
 
+/**
+ * Controls when the React island mounts on the client.
+ */
 export type ClientDirective = 'load' | 'idle' | 'visible' | 'only'
 
 export interface ReactInteropOptions {
@@ -30,8 +33,14 @@ export interface ReactInteropOptions {
   actionProps?: string[]
 }
 
+/**
+ * Static value or lazy accessor used by Fict props.
+ */
 export type MaybeAccessor<T> = T | (() => T)
 
+/**
+ * Serializable marker payload used to represent a React action callback.
+ */
 export interface ReactActionRef {
   __fictReactActionMarker: 'fict.react.action.v1'
   __fictReactActionQrl: string
