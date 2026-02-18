@@ -1,5 +1,9 @@
 # @fictjs/react
 
+[![Node CI](https://github.com/fictjs/react/actions/workflows/nodejs.yml/badge.svg)](https://github.com/fictjs/react/actions/workflows/nodejs.yml)
+[![npm](https://img.shields.io/npm/v/@fictjs/react.svg)](https://www.npmjs.com/package/@fictjs/react)
+![license](https://img.shields.io/npm/l/@fictjs/react)
+
 React interoperability layer for [Fict](https://github.com/nicepkg/fict) — embed React components inside Fict applications as controlled islands with SSR, lazy loading, and fine-grained prop reactivity.
 
 ## Why
@@ -8,14 +12,14 @@ Fict uses its own compiler-driven reactivity model. When you need to reuse an ex
 
 ## Features
 
-| Capability | API | When to use |
-|---|---|---|
-| Eager wrapping | `reactify` | The React component is already imported |
-| Declarative island | `ReactIsland` | Inline island with a `props` getter |
-| Resumable / lazy | `reactify$` | The component should be lazy-loaded via QRL |
-| Static loader | `installReactIslands` | Mount islands from plain HTML attributes (no Fict runtime) |
-| Serializable callbacks | `reactAction$` | Pass Fict actions across the serialization boundary |
-| Vite preset | `fictReactPreset` | Isolate React JSX transform from Fict's compiler |
+| Capability             | API                   | When to use                                                |
+| ---------------------- | --------------------- | ---------------------------------------------------------- |
+| Eager wrapping         | `reactify`            | The React component is already imported                    |
+| Declarative island     | `ReactIsland`         | Inline island with a `props` getter                        |
+| Resumable / lazy       | `reactify$`           | The component should be lazy-loaded via QRL                |
+| Static loader          | `installReactIslands` | Mount islands from plain HTML attributes (no Fict runtime) |
+| Serializable callbacks | `reactAction$`        | Pass Fict actions across the serialization boundary        |
+| Vite preset            | `fictReactPreset`     | Isolate React JSX transform from Fict's compiler           |
 
 ## Install
 
@@ -48,10 +52,7 @@ import { fictReactPreset } from '@fictjs/react/preset'
 import fict from '@fictjs/vite-plugin'
 
 export default defineConfig({
-  plugins: [
-    fict(),
-    ...fictReactPreset(),
-  ],
+  plugins: [fict(), ...fictReactPreset()],
 })
 ```
 
@@ -142,8 +143,8 @@ For advanced Fict-serialized values (for example action refs), prefer server out
 import { installReactIslands } from '@fictjs/react/loader'
 
 const cleanup = installReactIslands({
-  observe: true,          // Watch for dynamically added islands
-  defaultClient: 'idle',  // Fallback client strategy
+  observe: true, // Watch for dynamically added islands
+  defaultClient: 'idle', // Fallback client strategy
   visibleRootMargin: '200px',
 })
 
@@ -187,12 +188,12 @@ const RemoteEditor = reactify$({
 
 Control when each island mounts on the client:
 
-| Strategy | Behavior |
-|---|---|
-| `'load'` | Mount immediately (via microtask). **Default.** |
-| `'idle'` | Mount during idle time (`requestIdleCallback`, falls back to `setTimeout(…, 1)`) |
+| Strategy    | Behavior                                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `'load'`    | Mount immediately (via microtask). **Default.**                                                                          |
+| `'idle'`    | Mount during idle time (`requestIdleCallback`, falls back to `setTimeout(…, 1)`)                                         |
 | `'visible'` | Mount when the host element enters the viewport (`IntersectionObserver` with configurable `rootMargin`, default `200px`) |
-| `'only'` | Client-only rendering — no SSR, no hydration |
+| `'only'`    | Client-only rendering — no SSR, no hydration                                                                             |
 
 When `ssr` is `true` (the default), the React subtree is rendered to HTML on the server. On the client, the island hydrates (`hydrateRoot`) if SSR content is present, otherwise it creates a fresh root (`createRoot`).
 
@@ -204,13 +205,13 @@ Wraps a React component as a Fict component. Props flow reactively from the Fict
 
 **Options** (`ReactInteropOptions`):
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `ssr` | `boolean` | `true` | Server-side render the React subtree |
-| `client` | `ClientDirective` | `'load'` | Client mount strategy |
-| `visibleRootMargin` | `string` | `'200px'` | Margin for `'visible'` strategy |
-| `identifierPrefix` | `string` | `''` | React `useId` prefix for multi-root pages |
-| `actionProps` | `string[]` | `[]` | Additional callback prop names to materialize |
+| Option              | Type              | Default   | Description                                   |
+| ------------------- | ----------------- | --------- | --------------------------------------------- |
+| `ssr`               | `boolean`         | `true`    | Server-side render the React subtree          |
+| `client`            | `ClientDirective` | `'load'`  | Client mount strategy                         |
+| `visibleRootMargin` | `string`          | `'200px'` | Margin for `'visible'` strategy               |
+| `identifierPrefix`  | `string`          | `''`      | React `useId` prefix for multi-root pages     |
+| `actionProps`       | `string[]`        | `[]`      | Additional callback prop names to materialize |
 
 ### `ReactIsland<P>(props)`
 
@@ -222,11 +223,11 @@ Creates a lazy-loadable Fict component backed by a QRL.
 
 **Additional options** (`ReactifyQrlOptions<P>`):
 
-| Option | Type | Description |
-|---|---|---|
-| `module` | `string` | Module URL, usually `import.meta.url` |
-| `export` | `string` | Export name (default: `'default'`) |
-| `component` | `ComponentType<P>` | Optional eager reference for SSR |
+| Option      | Type               | Description                           |
+| ----------- | ------------------ | ------------------------------------- |
+| `module`    | `string`           | Module URL, usually `import.meta.url` |
+| `export`    | `string`           | Export name (default: `'default'`)    |
+| `component` | `ComponentType<P>` | Optional eager reference for SSR      |
 
 ### `installReactIslands(options?)`
 
@@ -234,13 +235,13 @@ Scans the document for `[data-fict-react]` hosts and mounts them. Returns a clea
 
 **Options** (`ReactIslandsLoaderOptions`):
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `document` | `Document` | `document` | Document to scan |
-| `selector` | `string` | `'[data-fict-react]'` | CSS selector for island hosts |
-| `observe` | `boolean` | `true` | Watch for dynamic additions/removals |
-| `defaultClient` | `ClientDirective` | `'load'` | Fallback client strategy |
-| `visibleRootMargin` | `string` | `'200px'` | Margin for `'visible'` strategy |
+| Option              | Type              | Default               | Description                          |
+| ------------------- | ----------------- | --------------------- | ------------------------------------ |
+| `document`          | `Document`        | `document`            | Document to scan                     |
+| `selector`          | `string`          | `'[data-fict-react]'` | CSS selector for island hosts        |
+| `observe`           | `boolean`         | `true`                | Watch for dynamic additions/removals |
+| `defaultClient`     | `ClientDirective` | `'load'`              | Fallback client strategy             |
+| `visibleRootMargin` | `string`          | `'200px'`             | Margin for `'visible'` strategy      |
 
 ### `reactAction$(moduleId, exportName?)`
 
@@ -254,26 +255,26 @@ Creates an action ref from a raw QRL string.
 
 Returns Vite plugins that scope the React JSX transform to a directory.
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `include` | `FilterPattern` | `[/src\/react\/.*\.[jt]sx?$/]` | Files to transform with React JSX |
-| `exclude` | `FilterPattern` | — | Files to exclude |
-| `react` | `ReactPluginOptions` | — | Additional `@vitejs/plugin-react` options |
+| Option    | Type                 | Default                        | Description                               |
+| --------- | -------------------- | ------------------------------ | ----------------------------------------- |
+| `include` | `FilterPattern`      | `[/src\/react\/.*\.[jt]sx?$/]` | Files to transform with React JSX         |
+| `exclude` | `FilterPattern`      | —                              | Files to exclude                          |
+| `react`   | `ReactPluginOptions` | —                              | Additional `@vitejs/plugin-react` options |
 
 ## Host Attributes
 
 When using the loader or resumable mode, the following data attributes control island behavior:
 
-| Attribute | Mutable | Purpose |
-|---|---|---|
-| `data-fict-react` | `*` | QRL pointing to the React component module |
-| `data-fict-react-props` | yes | URL-encoded serialized props |
-| `data-fict-react-action-props` | yes | URL-encoded JSON array of custom action prop names |
-| `data-fict-react-client` | no | Client strategy (`load` / `idle` / `visible` / `only`) |
-| `data-fict-react-ssr` | no | `'1'` if SSR content is present |
-| `data-fict-react-prefix` | no | React `useId` identifier prefix |
-| `data-fict-react-host` | — | Marks element as a React island host |
-| `data-fict-react-mounted` | — | Set to `'1'` after the island mounts |
+| Attribute                      | Mutable | Purpose                                                |
+| ------------------------------ | ------- | ------------------------------------------------------ |
+| `data-fict-react`              | `*`     | QRL pointing to the React component module             |
+| `data-fict-react-props`        | yes     | URL-encoded serialized props                           |
+| `data-fict-react-action-props` | yes     | URL-encoded JSON array of custom action prop names     |
+| `data-fict-react-client`       | no      | Client strategy (`load` / `idle` / `visible` / `only`) |
+| `data-fict-react-ssr`          | no      | `'1'` if SSR content is present                        |
+| `data-fict-react-prefix`       | no      | React `useId` identifier prefix                        |
+| `data-fict-react-host`         | —       | Marks element as a React island host                   |
+| `data-fict-react-mounted`      | —       | Set to `'1'` after the island mounts                   |
 
 `*` Changing the QRL disposes the current root and creates a new one.
 
