@@ -47,7 +47,12 @@ describe('mountReactRoot', () => {
     hostClientOnly.innerHTML = '<span>ssr</span>'
     mountReactRoot(hostClientOnly, 'node', { hydrate: false })
 
-    expect(createRootMock).toHaveBeenCalledTimes(2)
+    const hostWhitespace = document.createElement('div')
+    hostWhitespace.setAttribute('data-fict-react-ssr', '1')
+    hostWhitespace.innerHTML = ' \n  '
+    mountReactRoot(hostWhitespace, 'node', { hydrate: true })
+
+    expect(createRootMock).toHaveBeenCalledTimes(3)
     expect(hydrateRootMock).toHaveBeenCalledTimes(0)
   })
 })

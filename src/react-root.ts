@@ -12,7 +12,11 @@ export interface MountedReactRoot {
 }
 
 function hasHydratableContent(host: HTMLElement): boolean {
-  return host.hasAttribute('data-fict-react-ssr') && host.childNodes.length > 0
+  return (
+    host.hasAttribute('data-fict-react-ssr') &&
+    host.childNodes.length > 0 &&
+    host.innerHTML.trim().length > 0
+  )
 }
 
 export function mountReactRoot(
