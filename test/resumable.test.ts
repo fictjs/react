@@ -123,4 +123,34 @@ describe('installReactIslands', () => {
     stop()
     expect(host.hasAttribute('data-fict-react-mounted')).toBe(false)
   })
+
+  it('auto-disposes React roots when island hosts are removed from DOM', async () => {
+    const fixtureModule = new URL('./fixtures/lifecycle-component.ts', import.meta.url).href
+    const counters = globalThis as {
+      __FICT_REACT_MOUNT_COUNT__?: number
+      __FICT_REACT_UNMOUNT_COUNT__?: number
+    }
+    counters.__FICT_REACT_MOUNT_COUNT__ = 0
+    counters.__FICT_REACT_UNMOUNT_COUNT__ = 0
+
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${fixtureModule}#LifecycleComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'lifecycle' }))
+    document.body.appendChild(host)
+
+    const stop = installReactIslands()
+    await tick(30)
+
+    expect(counters.__FICT_REACT_MOUNT_COUNT__).toBe(1)
+    expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(0)
+
+    host.remove()
+    await tick(30)
+
+    expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(1)
+
+    stop()
+  })
 })

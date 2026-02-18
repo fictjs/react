@@ -193,6 +193,13 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
 
   const runtimes = new Map<HTMLElement, IslandRuntime>()
 
+  const disposeHost = (host: HTMLElement) => {
+    const runtime = runtimes.get(host)
+    if (!runtime) return
+    runtime.dispose()
+    runtimes.delete(host)
+  }
+
   const mountHost = (host: HTMLElement) => {
     if (runtimes.has(host)) return
     const runtime = createIslandRuntime(host, options)
@@ -233,6 +240,14 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
           if (!(added instanceof Element)) continue
           scanNode(added)
         }
+
+        for (const removed of Array.from(mutation.removedNodes)) {
+          if (!(removed instanceof Element)) continue
+          for (const host of collectIslandHosts(removed, options.selector)) {
+            if (host.isConnected) continue
+            disposeHost(host)
+          }
+        }
       }
     })
 
@@ -248,9 +263,8 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
     observer?.disconnect()
     observer = null
 
-    for (const runtime of runtimes.values()) {
-      runtime.dispose()
+    for (const host of Array.from(runtimes.keys())) {
+      disposeHost(host)
     }
-    runtimes.clear()
   }
 }
