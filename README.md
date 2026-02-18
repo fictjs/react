@@ -258,11 +258,14 @@ Creates an action ref from a raw QRL string.
 
 Returns Vite plugins that scope the React JSX transform to a directory.
 
-| Option    | Type                 | Default                        | Description                               |
-| --------- | -------------------- | ------------------------------ | ----------------------------------------- |
-| `include` | `FilterPattern`      | `[/src\/react\/.*\.[jt]sx?$/]` | Files to transform with React JSX         |
-| `exclude` | `FilterPattern`      | —                              | Files to exclude                          |
-| `react`   | `ReactPluginOptions` | —                              | Additional `@vitejs/plugin-react` options |
+| Option                     | Type                 | Default                        | Description                               |
+| -------------------------- | -------------------- | ------------------------------ | ----------------------------------------- |
+| `include`                  | `FilterPattern`      | `[/src\/react\/.*\.[jt]sx?$/]` | Files to transform with React JSX         |
+| `exclude`                  | `FilterPattern`      | —                              | Files to exclude                          |
+| `react`                    | `ReactPluginOptions` | —                              | Additional `@vitejs/plugin-react` options |
+| `optimizeReactDeps`        | `boolean`            | `true`                         | Add React `dedupe` + `optimizeDeps` hints |
+| `reactDedupe`              | `string[]`           | `['react', 'react-dom']`       | Override dedupe package list              |
+| `reactOptimizeDepsInclude` | `string[]`           | React runtime modules          | Override optimizeDeps include list        |
 
 ## Host Attributes
 
