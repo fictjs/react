@@ -3,7 +3,9 @@ import { __fictQrl } from '@fictjs/runtime/internal'
 import { parseQrl, resolveModuleUrl } from './qrl'
 import type { ReactActionRef } from './types'
 
-const ACTION_KEY = '__fictReactAction'
+const ACTION_MARKER_KEY = '__fictReactActionMarker'
+const ACTION_QRL_KEY = '__fictReactActionQrl'
+const ACTION_MARKER = 'fict.react.action.v1'
 const ACTION_PROP_PATTERN = /^on[A-Z]/
 const RETRY_BASE_DELAY_MS = 100
 const RETRY_MAX_DELAY_MS = 5_000
@@ -118,13 +120,18 @@ function toActionHandler(qrl: string): (...args: unknown[]) => void {
 }
 
 export function isReactActionRef(value: unknown): value is ReactActionRef {
-  return isRecord(value) && typeof value[ACTION_KEY] === 'string'
+  return (
+    isRecord(value) &&
+    value[ACTION_MARKER_KEY] === ACTION_MARKER &&
+    typeof value[ACTION_QRL_KEY] === 'string'
+  )
 }
 
 export function reactActionFromQrl(qrl: string): ReactActionRef {
-  return {
-    [ACTION_KEY]: qrl,
-  }
+  return Object.freeze({
+    [ACTION_MARKER_KEY]: ACTION_MARKER,
+    [ACTION_QRL_KEY]: qrl,
+  })
 }
 
 export function reactAction$(moduleId: string, exportName = 'default'): ReactActionRef {
@@ -167,7 +174,7 @@ export function materializeReactProps<T>(
     if (next === null) {
       next = copyOwnRecord(src)
     }
-    next[key] = toActionHandler(current.__fictReactAction)
+    next[key] = toActionHandler(current.__fictReactActionQrl)
   }
 
   return (next ?? value) as T

@@ -62,6 +62,20 @@ describe('materializeReactProps', () => {
     expect(typeof withConfig.submitAction).toBe('function')
   })
 
+  it('ignores objects without the explicit action marker payload', () => {
+    const fakeActionLike = {
+      __fictReactActionQrl: '/mock/module.js#run',
+      __fictReactActionMarker: 'legacy-or-user-data',
+    }
+    const props = {
+      onAction: fakeActionLike,
+    }
+
+    const result = materializeReactProps(props)
+    expect(result).toBe(props)
+    expect(result.onAction).toBe(fakeActionLike)
+  })
+
   it('clears failed import cache and retries after backoff cooldown', async () => {
     const actionCalls: string[] = []
     let attempts = 0

@@ -33,7 +33,8 @@ export interface ReactInteropOptions {
 export type MaybeAccessor<T> = T | (() => T)
 
 export interface ReactActionRef {
-  __fictReactAction: string
+  __fictReactActionMarker: 'fict.react.action.v1'
+  __fictReactActionQrl: string
 }
 
 export interface ReactifyQrlOptions<P extends Record<string, unknown>> extends ReactInteropOptions {
