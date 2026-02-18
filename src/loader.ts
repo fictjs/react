@@ -35,6 +35,34 @@ interface IslandRuntime {
   dispose: () => void
 }
 
+function isDevRuntime(): boolean {
+  if (typeof process === 'undefined') return false
+  const nodeEnv = process.env?.NODE_ENV
+  if (!nodeEnv) return false
+  return nodeEnv !== 'production'
+}
+
+const warnedImmutableAttrs = new WeakMap<HTMLElement, Set<string>>()
+
+function warnImmutableAttrMutation(host: HTMLElement, attrName: string): void {
+  if (!isDevRuntime()) return
+
+  let warned = warnedImmutableAttrs.get(host)
+  if (!warned) {
+    warned = new Set<string>()
+    warnedImmutableAttrs.set(host, warned)
+  }
+
+  if (warned.has(attrName)) return
+  warned.add(attrName)
+
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(
+      `[fict/react] Ignored runtime mutation of "${attrName}". Recreate the island host to apply this attribute.`,
+    )
+  }
+}
+
 function isClientDirective(value: string | null | undefined): value is ClientDirective {
   return value === 'load' || value === 'idle' || value === 'visible' || value === 'only'
 }
@@ -309,6 +337,17 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
             if (target.matches(options.selector) && target.getAttribute(DATA_FICT_REACT_QRL)) {
               mountHost(target)
             }
+            continue
+          }
+
+          if (
+            mutation.attributeName === DATA_FICT_REACT_CLIENT ||
+            mutation.attributeName === DATA_FICT_REACT_SSR ||
+            mutation.attributeName === DATA_FICT_REACT_PREFIX
+          ) {
+            if (runtimes.has(target)) {
+              warnImmutableAttrMutation(target, mutation.attributeName)
+            }
           }
           continue
         }
@@ -334,7 +373,14 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: [DATA_FICT_REACT_PROPS, DATA_FICT_REACT_QRL, DATA_FICT_REACT_ACTION_PROPS],
+      attributeFilter: [
+        DATA_FICT_REACT_PROPS,
+        DATA_FICT_REACT_QRL,
+        DATA_FICT_REACT_ACTION_PROPS,
+        DATA_FICT_REACT_CLIENT,
+        DATA_FICT_REACT_SSR,
+        DATA_FICT_REACT_PREFIX,
+      ],
     })
   }
 
