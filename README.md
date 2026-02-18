@@ -81,6 +81,26 @@ import { reactAction$ } from '@fictjs/react'
 />
 ```
 
+默认会把回调类 props（`/^on[A-Z]/`）中的 action ref materialize 成可调用函数。  
+如果你的回调 prop 不是 `onX` 命名，需要通过 `actionProps` 显式声明：
+
+```ts
+const RemoteReactIsland = reactify$({
+  module: import.meta.url,
+  export: 'RemoteReactIsland',
+  actionProps: ['submitAction'],
+})
+```
+
+对应 loader 场景可通过 host 属性传入：
+
+```html
+<div
+  data-fict-react="...#RemoteReactIsland"
+  data-fict-react-action-props="%5B%22submitAction%22%5D"
+></div>
+```
+
 ### 6) Vite preset（React lane）
 
 ```ts
