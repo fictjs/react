@@ -133,6 +133,10 @@ Mount React components from plain HTML without any Fict runtime involvement:
 ></div>
 ```
 
+`data-fict-react-props` must contain URL-encoded, serialization-safe data.
+For plain HTML authoring, use JSON-compatible primitives/objects/arrays.
+For advanced Fict-serialized values (for example action refs), prefer server output produced by `reactify$`/Fict runtime instead of manually crafting attributes.
+
 ```ts
 import { installReactIslands } from '@fictjs/react/loader'
 
