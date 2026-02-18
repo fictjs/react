@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { ReactIsland, reactify } from '../src'
 
 const tick = async () => {
-  await new Promise(resolve => setTimeout(resolve, 0))
+  await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 afterEach(() => {
@@ -54,7 +54,6 @@ describe('reactify', () => {
     await tick()
 
     expect(container.querySelector('#react-count')?.textContent).toBe('1')
-
     ;(container.querySelector('#inc') as HTMLButtonElement).click()
     await tick()
 
@@ -104,7 +103,6 @@ describe('reactify', () => {
     await tick()
 
     expect(container.querySelector('#tracked')).not.toBeNull()
-
     ;(container.querySelector('#toggle') as HTMLButtonElement).click()
     await tick()
 
@@ -139,15 +137,17 @@ describe('reactify', () => {
     let dataDependencyRuns = 0
     const stableData = { version: 1 }
 
-    const IdentityProbe = reactify(({ value, data }: { value: number; data: { version: number } }) => {
-      const prevDataRef = useRef<{ version: number } | null>(null)
-      if (prevDataRef.current !== data) {
-        dataDependencyRuns += 1
-        prevDataRef.current = data
-      }
+    const IdentityProbe = reactify(
+      ({ value, data }: { value: number; data: { version: number } }) => {
+        const prevDataRef = useRef<{ version: number } | null>(null)
+        if (prevDataRef.current !== data) {
+          dataDependencyRuns += 1
+          prevDataRef.current = data
+        }
 
-      return React.createElement('span', { id: 'identity-value' }, String(value))
-    })
+        return React.createElement('span', { id: 'identity-value' }, String(value))
+      },
+    )
 
     function App() {
       const value = createSignal(0)
@@ -182,7 +182,6 @@ describe('reactify', () => {
     const dispose = render(() => ({ type: App, props: {} }), container)
     await tick()
     expect(dataDependencyRuns).toBe(1)
-
     ;(container.querySelector('#identity-inc') as HTMLButtonElement).click()
     await tick()
 
@@ -233,7 +232,6 @@ describe('ReactIsland', () => {
     await tick()
 
     expect(container.querySelector('#island-label')?.textContent).toBe('alpha')
-
     ;(container.querySelector('#swap') as HTMLButtonElement).click()
     await tick()
 

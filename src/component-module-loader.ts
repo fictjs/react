@@ -1,7 +1,7 @@
 export type ReactComponentModule = Record<string, unknown>
 export type ReactComponentModuleLoader = (resolvedUrl: string) => Promise<ReactComponentModule>
 
-const defaultComponentModuleLoader: ReactComponentModuleLoader = resolvedUrl =>
+const defaultComponentModuleLoader: ReactComponentModuleLoader = (resolvedUrl) =>
   import(/* @vite-ignore */ resolvedUrl) as Promise<ReactComponentModule>
 
 let resumableComponentModuleLoader: ReactComponentModuleLoader = defaultComponentModuleLoader
@@ -25,7 +25,9 @@ export function __resetResumableComponentModuleLoaderForTests(): void {
   resumableComponentModuleLoader = defaultComponentModuleLoader
 }
 
-export function __setLoaderComponentModuleLoaderForTests(loader: ReactComponentModuleLoader | null): void {
+export function __setLoaderComponentModuleLoaderForTests(
+  loader: ReactComponentModuleLoader | null,
+): void {
   loaderComponentModuleLoader = loader ?? defaultComponentModuleLoader
 }
 

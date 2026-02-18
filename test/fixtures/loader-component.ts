@@ -6,7 +6,11 @@ export interface LoaderComponentProps {
 }
 
 export function LoaderComponent(props: LoaderComponentProps) {
-  return React.createElement('div', { className: 'loader-component' }, `${props.label}:${props.count ?? 0}`)
+  return React.createElement(
+    'div',
+    { className: 'loader-component' },
+    `${props.label}:${props.count ?? 0}`,
+  )
 }
 
 export default LoaderComponent

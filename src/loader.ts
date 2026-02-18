@@ -106,9 +106,7 @@ function pickClientDirective(host: HTMLElement, fallback: ClientDirective): Clie
   return isClientDirective(raw) ? raw : fallback
 }
 
-async function loadComponentFromQrl(
-  qrl: string,
-): Promise<ComponentType<Record<string, unknown>>> {
+async function loadComponentFromQrl(qrl: string): Promise<ComponentType<Record<string, unknown>>> {
   const { url, exportName } = parseQrl(qrl)
   if (!url) {
     throw new Error('[fict/react] React island is missing module URL in data-fict-react.')
@@ -148,7 +146,7 @@ function readActionProps(host: HTMLElement): string[] {
 
     return parsed
       .filter((item): item is string => typeof item === 'string')
-      .map(name => name.trim())
+      .map((name) => name.trim())
       .filter(Boolean)
   } catch {
     return []
@@ -164,7 +162,10 @@ function readIdentifierPrefix(host: HTMLElement): string | undefined {
   return value ?? undefined
 }
 
-function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLoaderOptions>): IslandRuntime {
+function createIslandRuntime(
+  host: HTMLElement,
+  options: Required<ReactIslandsLoaderOptions>,
+): IslandRuntime {
   const qrl = host.getAttribute(DATA_FICT_REACT_QRL)
   if (!qrl) {
     return {
@@ -207,14 +208,14 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
     }
 
     loadPromise = loadComponentFromQrl(qrl)
-      .then(loaded => {
+      .then((loaded) => {
         component = loaded
         loadFailures = 0
         nextLoadRetryAt = 0
         loadPromise = null
         return loaded
       })
-      .catch(error => {
+      .catch((error) => {
         loadPromise = null
         loadFailures += 1
         nextLoadRetryAt = Date.now() + retryDelayMs(loadFailures)
@@ -262,7 +263,7 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
       root = mountReactRoot(host, node, mountOptions)
       host.setAttribute(DATA_FICT_REACT_MOUNTED, '1')
       clearRetryTimer()
-    })().catch(error => {
+    })().catch((error) => {
       if (typeof console !== 'undefined' && typeof console.error === 'function') {
         console.error('[fict/react] Failed to mount React island from loader.', error)
       }
@@ -354,7 +355,7 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
 
   let observer: MutationObserver | null = null
   if (options.observe && typeof MutationObserver !== 'undefined') {
-    observer = new MutationObserver(mutations => {
+    observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
         if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
           const target = mutation.target

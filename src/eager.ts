@@ -27,7 +27,7 @@ interface NormalizedReactInteropOptions {
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
   const actionProps = Array.from(
-    new Set((options?.actionProps ?? []).map(name => name.trim()).filter(Boolean)),
+    new Set((options?.actionProps ?? []).map((name) => name.trim()).filter(Boolean)),
   )
 
   return {
@@ -107,7 +107,10 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
       latestProps = runtime.readProps()
       if (root) {
         root.render(
-          createReactElement(runtime.component, materializeReactProps(latestProps, normalized.actionProps)),
+          createReactElement(
+            runtime.component,
+            materializeReactProps(latestProps, normalized.actionProps),
+          ),
         )
       }
     })

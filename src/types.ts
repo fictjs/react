@@ -64,8 +64,7 @@ export interface ReactifyQrlOptions<P extends Record<string, unknown>> extends R
 }
 
 export interface ReactIslandProps<P extends Record<string, unknown>>
-  extends BaseProps,
-    ReactInteropOptions {
+  extends BaseProps, ReactInteropOptions {
   component: ComponentType<P>
   props?: MaybeAccessor<P>
 }

@@ -13,7 +13,7 @@ const flushMicrotasks = async () => {
 }
 
 const tick = async (ms = 0) => {
-  await new Promise(resolve => setTimeout(resolve, ms))
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 afterEach(() => {

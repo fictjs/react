@@ -7,7 +7,7 @@ import { installReactIslands, reactify$ } from '../src'
 import { encodePropsForAttribute } from '../src/serialization'
 
 const tick = async (ms = 0) => {
-  await new Promise(resolve => setTimeout(resolve, ms))
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 afterEach(() => {
@@ -77,7 +77,10 @@ describe('interop IT', () => {
     await tick(20)
     expect(shellHost.textContent).toContain('it:3')
 
-    shellHost.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'it', count: 4 }))
+    shellHost.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'it', count: 4 }),
+    )
     await tick(20)
     expect(shellHost.textContent).toContain('it:4')
 

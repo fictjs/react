@@ -14,7 +14,7 @@ import {
 } from '../src/testing'
 
 const tick = async (ms = 0) => {
-  await new Promise(resolve => setTimeout(resolve, ms))
+  await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 afterEach(() => {
@@ -68,7 +68,6 @@ describe('reactify$', () => {
     await tick(20)
 
     expect(container.textContent).toContain('remote:1')
-
     ;(container.querySelector('#bump') as HTMLButtonElement).click()
     await tick(20)
 
@@ -133,7 +132,6 @@ describe('reactify$', () => {
       container,
     )
     await tick(30)
-
     ;(container.querySelector('#action-button') as HTMLButtonElement).click()
     await tick(30)
 
@@ -172,7 +170,6 @@ describe('reactify$', () => {
       container,
     )
     await tick(30)
-
     ;(container.querySelector('#custom-action-button') as HTMLButtonElement).click()
     await tick(30)
 
@@ -185,7 +182,7 @@ describe('reactify$', () => {
     const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
     let attempts = 0
 
-    __setResumableComponentModuleLoaderForTests(async resolvedUrl => {
+    __setResumableComponentModuleLoaderForTests(async (resolvedUrl) => {
       attempts += 1
       if (attempts === 1) {
         throw new Error('transient-load-failure')
@@ -224,7 +221,10 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
     host.setAttribute('data-fict-react-client', 'load')
     host.setAttribute('data-fict-react-ssr', '0')
-    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'loader', count: 5 }))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'loader', count: 5 }),
+    )
 
     document.body.appendChild(host)
 
@@ -234,7 +234,10 @@ describe('installReactIslands', () => {
     expect(host.textContent).toContain('loader:5')
     expect(host.getAttribute('data-fict-react-mounted')).toBe('1')
 
-    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'loader', count: 6 }))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'loader', count: 6 }),
+    )
     await tick(20)
 
     expect(host.textContent).toContain('loader:6')
@@ -280,7 +283,10 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${moduleA}#LoaderComponent`)
     host.setAttribute('data-fict-react-client', 'load')
     host.setAttribute('data-fict-react-ssr', '0')
-    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'switch', count: 1 }))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'switch', count: 1 }),
+    )
     document.body.appendChild(host)
 
     const stop = installReactIslands()
@@ -315,7 +321,6 @@ describe('installReactIslands', () => {
 
     const stop = installReactIslands()
     await tick(30)
-
     ;(host.querySelector('#action-button') as HTMLButtonElement).click()
     await tick(30)
 
@@ -334,7 +339,10 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${componentModule}#CustomActionComponent`)
     host.setAttribute('data-fict-react-client', 'load')
     host.setAttribute('data-fict-react-ssr', '0')
-    host.setAttribute('data-fict-react-action-props', encodeURIComponent(JSON.stringify(['submitAction'])))
+    host.setAttribute(
+      'data-fict-react-action-props',
+      encodeURIComponent(JSON.stringify(['submitAction'])),
+    )
     host.setAttribute(
       'data-fict-react-props',
       encodePropsForAttribute({
@@ -346,7 +354,6 @@ describe('installReactIslands', () => {
 
     const stop = installReactIslands()
     await tick(30)
-
     ;(host.querySelector('#custom-action-button') as HTMLButtonElement).click()
     await tick(30)
 
@@ -359,7 +366,7 @@ describe('installReactIslands', () => {
     const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
     let attempts = 0
 
-    __setLoaderComponentModuleLoaderForTests(async resolvedUrl => {
+    __setLoaderComponentModuleLoaderForTests(async (resolvedUrl) => {
       attempts += 1
       if (attempts === 1) {
         throw new Error('transient-loader-failure')
@@ -372,7 +379,10 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
     host.setAttribute('data-fict-react-client', 'load')
     host.setAttribute('data-fict-react-ssr', '0')
-    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'retry-loader', count: 9 }))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'retry-loader', count: 9 }),
+    )
     document.body.appendChild(host)
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -427,7 +437,10 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
     host.setAttribute('data-fict-react-client', 'load')
     host.setAttribute('data-fict-react-ssr', '0')
-    host.setAttribute('data-fict-react-props', encodePropsForAttribute({ label: 'silent', count: 2 }))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'silent', count: 2 }),
+    )
     document.body.appendChild(host)
 
     const runtimeHost = globalThis as { __FICT_DEV__?: boolean }

@@ -65,11 +65,11 @@ async function loadActionModule(resolvedUrl: string): Promise<Record<string, unk
   let modPromise = moduleCache.get(resolvedUrl)
   if (!modPromise) {
     modPromise = actionModuleLoader(resolvedUrl)
-      .then(mod => {
+      .then((mod) => {
         moduleRetryState.delete(resolvedUrl)
         return mod
       })
-      .catch(error => {
+      .catch((error) => {
         moduleCache.delete(resolvedUrl)
         const failures = (moduleRetryState.get(resolvedUrl)?.failures ?? 0) + 1
         moduleRetryState.set(resolvedUrl, {
@@ -109,7 +109,7 @@ function toActionHandler(qrl: string): (...args: unknown[]) => void {
   }
 
   const handler = (...args: unknown[]) => {
-    void invokeReactAction(qrl, args).catch(error => {
+    void invokeReactAction(qrl, args).catch((error) => {
       if (typeof console !== 'undefined' && typeof console.error === 'function') {
         console.error('[fict/react] Failed to execute React action.', error)
       }

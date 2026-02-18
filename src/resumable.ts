@@ -39,7 +39,7 @@ type ReactComponentModule = Record<string, unknown>
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
   const actionProps = Array.from(
-    new Set((options?.actionProps ?? []).map(name => name.trim()).filter(Boolean)),
+    new Set((options?.actionProps ?? []).map((name) => name.trim()).filter(Boolean)),
   )
 
   return {
@@ -137,14 +137,14 @@ export function reactify$<P extends Record<string, unknown>>(
       }
 
       loadPromise = loadComponentFromQrl<P>(qrl)
-        .then(component => {
+        .then((component) => {
           resolvedComponent = component
           loadFailures = 0
           nextLoadRetryAt = 0
           loadPromise = null
           return component
         })
-        .catch(error => {
+        .catch((error) => {
           loadPromise = null
           loadFailures += 1
           nextLoadRetryAt = Date.now() + retryDelayMs(loadFailures)
@@ -224,7 +224,10 @@ export function reactify$<P extends Record<string, unknown>>(
               component = await ensureComponent()
             } catch (error) {
               if (typeof console !== 'undefined' && typeof console.error === 'function') {
-                console.error('[fict/react] Failed to load resumable React island component.', error)
+                console.error(
+                  '[fict/react] Failed to load resumable React island component.',
+                  error,
+                )
               }
               scheduleRetry(mount)
               return
@@ -247,7 +250,7 @@ export function reactify$<P extends Record<string, unknown>>(
             root = mountReactRoot(host, node, mountOptions)
             host.setAttribute(DATA_FICT_REACT_MOUNTED, '1')
             clearRetryTimer()
-          })().catch(error => {
+          })().catch((error) => {
             if (typeof console !== 'undefined' && typeof console.error === 'function') {
               console.error('[fict/react] Failed to mount resumable React island.', error)
             }
