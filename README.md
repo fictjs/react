@@ -71,6 +71,12 @@ import { installReactIslands } from '@fictjs/react'
 installReactIslands()
 ```
 
+`installReactIslands` 的 host 属性约束：
+
+- 可动态更新并触发刷新：`data-fict-react-props`、`data-fict-react-action-props`
+- 初始化后不可变（变更需重建 island host）：`data-fict-react-client`、`data-fict-react-ssr`、`data-fict-react-prefix`
+- 可变且会触发重建：`data-fict-react`（QRL 变化会 dispose + remount）
+
 ### 5) 可序列化回调（Action）
 
 ```ts
