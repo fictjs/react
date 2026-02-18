@@ -1,25 +1,25 @@
 # @fictjs/react
 
-Fict 与 React 的互操作层，采用可控的 React Islands 模型。
+A React interoperability layer for Fict, based on a controlled React Islands model.
 
-## 功能
+## Features
 
-- `reactify`：把 React 组件包装成 Fict 组件（CSR + SSR）。
-- `ReactIsland`：声明式岛屿组件，支持 `props` getter。
-- `reactify$`：QRL 可序列化 React 岛屿，支持延迟加载。
-- `installReactIslands`：客户端扫描并挂载 `data-fict-react` 岛屿。
-- `reactAction$`：把 Fict QRL action 作为可序列化 React callback 传递。
-- `fictReactPreset`：Vite 下按目录隔离 React JSX 转换（默认 `src/react/**`）。
+- `reactify`: Wrap a React component as a Fict component (CSR + SSR).
+- `ReactIsland`: Declarative island component with `props` getter support.
+- `reactify$`: QRL-serializable React island with lazy loading support.
+- `installReactIslands`: Scan and mount `data-fict-react` islands on the client.
+- `reactAction$`: Pass Fict QRL actions as serializable React callbacks.
+- `fictReactPreset`: Isolate React JSX transform by directory in Vite (default `src/react/**`).
 
-## 安装
+## Install
 
 ```bash
 pnpm add @fictjs/react react react-dom @fictjs/runtime
 ```
 
-## 用法
+## Usage
 
-### 1) `reactify`（Eager）
+### 1) `reactify` (Eager)
 
 ```ts
 import { reactify } from '@fictjs/react'
@@ -31,7 +31,7 @@ function ReactButton(props: { text: string }) {
 
 const FictButton = reactify(ReactButton)
 
-// Fict 里使用
+// Use in Fict
 ;<FictButton text={prop(() => state.text)} />
 ```
 
@@ -48,7 +48,7 @@ import { ReactIsland } from '@fictjs/react'
 />
 ```
 
-### 3) `reactify$`（Resumable）
+### 3) `reactify$` (Resumable)
 
 ```ts
 import { reactify$ } from '@fictjs/react'
@@ -61,9 +61,9 @@ export const FictButton$ = reactify$({
 })
 ```
 
-> `reactify$` 会输出 `data-fict-react` + `data-fict-react-props`，可在客户端按策略加载。
+> `reactify$` outputs `data-fict-react` + `data-fict-react-props`, which can be mounted on the client by strategy.
 
-### 4) 客户端 loader
+### 4) Client Loader
 
 ```ts
 import { installReactIslands } from '@fictjs/react'
@@ -71,14 +71,15 @@ import { installReactIslands } from '@fictjs/react'
 installReactIslands()
 ```
 
-`installReactIslands` 的 host 属性约束：
+`installReactIslands` host attribute constraints:
 
-- 可动态更新并触发刷新：`data-fict-react-props`、`data-fict-react-action-props`
-- 初始化后不可变（变更需重建 island host）：`data-fict-react-client`、`data-fict-react-ssr`、`data-fict-react-prefix`
-- 可变且会触发重建：`data-fict-react`（QRL 变化会 dispose + remount）
-- 对不可变属性的运行时变更：开发环境会告警，生产环境静默忽略
+- Dynamically updatable (triggers refresh): `data-fict-react-props`, `data-fict-react-action-props`
+- Immutable after initialization (recreate the island host to apply changes):
+  `data-fict-react-client`, `data-fict-react-ssr`, `data-fict-react-prefix`
+- Mutable and triggers runtime rebuild: `data-fict-react` (QRL changes cause dispose + remount)
+- Runtime mutations of immutable attributes: warning in development, silent ignore in production
 
-### 5) 可序列化回调（Action）
+### 5) Serializable Callback (Action)
 
 ```ts
 import { reactAction$ } from '@fictjs/react'
@@ -88,8 +89,8 @@ import { reactAction$ } from '@fictjs/react'
 />
 ```
 
-默认会把回调类 props（`/^on[A-Z]/`）中的 action ref materialize 成可调用函数。  
-如果你的回调 prop 不是 `onX` 命名，需要通过 `actionProps` 显式声明：
+By default, action refs in callback-like props (`/^on[A-Z]/`) are materialized into callable functions.
+If your callback prop is not named like `onX`, declare it explicitly via `actionProps`:
 
 ```ts
 const RemoteReactIsland = reactify$({
@@ -99,7 +100,7 @@ const RemoteReactIsland = reactify$({
 })
 ```
 
-对应 loader 场景可通过 host 属性传入：
+For loader-based usage, pass this through host attributes:
 
 ```html
 <div
@@ -108,7 +109,7 @@ const RemoteReactIsland = reactify$({
 ></div>
 ```
 
-### 6) Vite preset（React lane）
+### 6) Vite Preset (React Lane)
 
 ```ts
 import { defineConfig } from 'vite'
@@ -123,14 +124,14 @@ export default defineConfig({
 })
 ```
 
-## 客户端策略
+## Client Strategies
 
-- `load`：尽快挂载。
-- `idle`：空闲时挂载（`requestIdleCallback` 优先）。
-- `visible`：进入视口时挂载（`IntersectionObserver`）。
-- `only`：仅客户端渲染（不走 SSR hydrate）。
+- `load`: Mount as soon as possible.
+- `idle`: Mount when idle (`requestIdleCallback` preferred).
+- `visible`: Mount when entering the viewport (`IntersectionObserver`).
+- `only`: Client-only rendering (no SSR hydrate).
 
 ## Internal Hooks
 
-- `src/testing.ts` 提供仓库测试用注入 hooks，仅用于本仓库测试。
-- 这些 hooks 属于 internal/unstable，不在包 exports 中，不承诺兼容性。
+- `src/testing.ts` provides test injection hooks for this repository only.
+- These hooks are internal/unstable, not part of package exports, and not covered by compatibility guarantees.
