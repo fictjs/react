@@ -68,32 +68,35 @@ fictReactPreset({
 ```tsx
 import { reactify } from '@fictjs/react'
 import { prop } from '@fictjs/runtime'
+import { createSignal } from '@fictjs/runtime/advanced'
 import { MyButton } from './react/MyButton'
 
 const FictButton = reactify(MyButton)
 
 // In a Fict component
 function App() {
-  let count = $state(0)
-  return <FictButton label={prop(() => `Clicked ${count} times`)} />
+  const count = createSignal(0)
+  return <FictButton label={prop(() => `Clicked ${count()} times`)} />
 }
 ```
 
 The React component re-renders whenever the reactive props change — without re-running the Fict component function.
+If your app uses Fict compiler macros, you can write an equivalent `$state(...)` style.
 
 ### 3. Declarative Island
 
 ```tsx
 import { ReactIsland } from '@fictjs/react'
+import { createSignal } from '@fictjs/runtime/advanced'
 import { Chart } from './react/Chart'
 
 function Dashboard() {
-  let data = $state([])
+  const data = createSignal<number[]>([])
 
   return (
     <ReactIsland
       component={Chart}
-      props={() => ({ data, height: 300 })}
+      props={() => ({ data: data(), height: 300 })}
       client="visible"
       ssr
     />
