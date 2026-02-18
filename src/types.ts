@@ -27,6 +27,10 @@ export interface ReactInteropOptions {
 
 export type MaybeAccessor<T> = T | (() => T)
 
+export interface ReactActionRef {
+  __fictReactAction: string
+}
+
 export interface ReactifyQrlOptions<P extends Record<string, unknown>> extends ReactInteropOptions {
   /**
    * Module id used by __fictQrl, usually import.meta.url.

@@ -3,6 +3,7 @@ import { __fictIsSSR, __fictQrl } from '@fictjs/runtime/internal'
 import { createElement as createReactElement, type ComponentType } from 'react'
 import { renderToString } from 'react-dom/server'
 
+import { materializeReactProps } from './action'
 import {
   DATA_FICT_REACT_CLIENT,
   DATA_FICT_REACT_HOST,
@@ -121,7 +122,7 @@ export function reactify$<P extends Record<string, unknown>>(
     }
 
     if (isSSR && normalized.ssr && resolvedComponent) {
-      const ssrNode = createReactElement(resolvedComponent, latestProps)
+      const ssrNode = createReactElement(resolvedComponent, materializeReactProps(latestProps))
       hostProps.dangerouslySetInnerHTML = { __html: renderToString(ssrNode) }
     }
 
@@ -131,7 +132,7 @@ export function reactify$<P extends Record<string, unknown>>(
         syncSerializedPropsToHost()
 
         if (root && resolvedComponent) {
-          root.render(createReactElement(resolvedComponent, latestProps))
+          root.render(createReactElement(resolvedComponent, materializeReactProps(latestProps)))
         }
       })
 
@@ -146,7 +147,7 @@ export function reactify$<P extends Record<string, unknown>>(
             const component = await ensureComponent()
             if (!host || !active || root) return
 
-            const node = createReactElement(component, latestProps)
+            const node = createReactElement(component, materializeReactProps(latestProps))
             const mountOptions = normalized.identifierPrefix
               ? {
                   hydrate: normalized.ssr && normalized.client !== 'only',

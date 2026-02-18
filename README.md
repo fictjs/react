@@ -8,6 +8,7 @@ Fict 与 React 的互操作层，采用可控的 React Islands 模型。
 - `ReactIsland`：声明式岛屿组件，支持 `props` getter。
 - `reactify$`：QRL 可序列化 React 岛屿，支持延迟加载。
 - `installReactIslands`：客户端扫描并挂载 `data-fict-react` 岛屿。
+- `reactAction$`：把 Fict QRL action 作为可序列化 React callback 传递。
 - `fictReactPreset`：Vite 下按目录隔离 React JSX 转换（默认 `src/react/**`）。
 
 ## 安装
@@ -70,7 +71,17 @@ import { installReactIslands } from '@fictjs/react'
 installReactIslands()
 ```
 
-### 5) Vite preset（React lane）
+### 5) 可序列化回调（Action）
+
+```ts
+import { reactAction$ } from '@fictjs/react'
+
+<RemoteReactIsland
+  onAction={reactAction$(import.meta.url, 'handleAction')}
+/>
+```
+
+### 6) Vite preset（React lane）
 
 ```ts
 import { defineConfig } from 'vite'

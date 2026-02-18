@@ -4,7 +4,7 @@ import { __fictDisableSSR, __fictEnableSSR } from '@fictjs/runtime/internal'
 import React from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { installReactIslands, reactify$ } from '../src'
+import { installReactIslands, reactAction$, reactify$ } from '../src'
 import { encodePropsForAttribute } from '../src/serialization'
 
 const tick = async (ms = 0) => {
@@ -96,6 +96,41 @@ describe('reactify$', () => {
 
     dispose()
   })
+
+  it('materializes serialized action refs into callable React callbacks', async () => {
+    const componentModule = new URL('./fixtures/action-button-component.tsx', import.meta.url).href
+    const actionModule = new URL('./fixtures/react-action-handler.ts', import.meta.url).href
+    const actionHost = globalThis as { __FICT_REACT_ACTION_CALLS__?: string[] }
+    actionHost.__FICT_REACT_ACTION_CALLS__ = []
+
+    const ActionIsland = reactify$<{ label: string; onAction: ReturnType<typeof reactAction$> }>({
+      module: componentModule,
+      export: 'ActionButtonComponent',
+      ssr: false,
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: ActionIsland,
+        props: {
+          label: 'run',
+          onAction: reactAction$(actionModule, 'recordReactAction'),
+        },
+      }),
+      container,
+    )
+    await tick(30)
+
+    ;(container.querySelector('#action-button') as HTMLButtonElement).click()
+    await tick(30)
+
+    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:run'])
+
+    dispose()
+  })
 })
 
 describe('installReactIslands', () => {
@@ -171,6 +206,36 @@ describe('installReactIslands', () => {
     host.setAttribute('data-fict-react', `${moduleB}#LoaderComponentAlt`)
     await tick(30)
     expect(host.textContent).toContain('ALT-switch:1')
+
+    stop()
+  })
+
+  it('loader executes action refs from serialized props', async () => {
+    const componentModule = new URL('./fixtures/action-button-component.tsx', import.meta.url).href
+    const actionModule = new URL('./fixtures/react-action-handler.ts', import.meta.url).href
+    const actionHost = globalThis as { __FICT_REACT_ACTION_CALLS__?: string[] }
+    actionHost.__FICT_REACT_ACTION_CALLS__ = []
+
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${componentModule}#ActionButtonComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({
+        label: 'loader',
+        onAction: reactAction$(actionModule, 'recordReactAction'),
+      }),
+    )
+    document.body.appendChild(host)
+
+    const stop = installReactIslands()
+    await tick(30)
+
+    ;(host.querySelector('#action-button') as HTMLButtonElement).click()
+    await tick(30)
+
+    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:loader'])
 
     stop()
   })

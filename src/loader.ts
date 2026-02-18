@@ -1,5 +1,6 @@
 import { createElement as createReactElement, type ComponentType } from 'react'
 
+import { materializeReactProps } from './action'
 import {
   DATA_FICT_REACT_CLIENT,
   DATA_FICT_REACT_MOUNTED,
@@ -62,6 +63,10 @@ function readSerializedProps(host: HTMLElement): Record<string, unknown> {
   return decodePropsFromAttribute(host.getAttribute(DATA_FICT_REACT_PROPS))
 }
 
+function readRenderableProps(host: HTMLElement): Record<string, unknown> {
+  return materializeReactProps(readSerializedProps(host))
+}
+
 function readIdentifierPrefix(host: HTMLElement): string | undefined {
   const value = host.getAttribute(DATA_FICT_REACT_PREFIX)
   return value ?? undefined
@@ -104,7 +109,7 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
 
   const renderCurrent = () => {
     if (!root || !component || disposed) return
-    root.render(createReactElement(component, readSerializedProps(host)))
+    root.render(createReactElement(component, readRenderableProps(host)))
   }
 
   const mount = () => {
@@ -114,7 +119,7 @@ function createIslandRuntime(host: HTMLElement, options: Required<ReactIslandsLo
       const loaded = await ensureComponent()
       if (disposed || root) return
 
-      const node = createReactElement(loaded, readSerializedProps(host))
+      const node = createReactElement(loaded, readRenderableProps(host))
       const mountOptions = identifierPrefix
         ? {
             hydrate: canHydrate,

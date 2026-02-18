@@ -3,6 +3,7 @@ import { __fictIsSSR } from '@fictjs/runtime/internal'
 import { createElement as createReactElement, type ComponentType } from 'react'
 import { renderToString } from 'react-dom/server'
 
+import { materializeReactProps } from './action'
 import {
   DATA_FICT_REACT_CLIENT,
   DATA_FICT_REACT_HOST,
@@ -81,7 +82,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   }
 
   if (isSSR && normalized.ssr) {
-    const ssrNode = createReactElement(runtime.component, latestProps)
+    const ssrNode = createReactElement(runtime.component, materializeReactProps(latestProps))
     hostProps.dangerouslySetInnerHTML = { __html: renderToString(ssrNode) }
   }
 
@@ -89,7 +90,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
     createEffect(() => {
       latestProps = runtime.readProps()
       if (root) {
-        root.render(createReactElement(runtime.component, latestProps))
+        root.render(createReactElement(runtime.component, materializeReactProps(latestProps)))
       }
     })
 
@@ -99,7 +100,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
 
       const mount = () => {
         if (!host || root) return
-        const node = createReactElement(runtime.component, latestProps)
+        const node = createReactElement(runtime.component, materializeReactProps(latestProps))
         const mountOptions = normalized.identifierPrefix
           ? {
               hydrate: normalized.ssr && normalized.client !== 'only',
