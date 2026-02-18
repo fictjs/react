@@ -221,6 +221,28 @@ describe('reactify', () => {
 
     dispose()
   })
+
+  it('uses a custom host tag name when configured', async () => {
+    const CustomHost = reactify(
+      ({ value }: { value: string }) => React.createElement('span', { id: 'custom-host' }, value),
+      {
+        tagName: 'section',
+      },
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(() => ({ type: CustomHost, props: { value: 'ok' } }), container)
+    await tick()
+
+    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+    expect(host).not.toBeNull()
+    expect(host?.tagName).toBe('SECTION')
+    expect(container.querySelector('#custom-host')?.textContent).toBe('ok')
+
+    dispose()
+  })
 })
 
 describe('ReactIsland', () => {
@@ -267,6 +289,35 @@ describe('ReactIsland', () => {
     await tick()
 
     expect(container.querySelector('#island-label')?.textContent).toBe('beta')
+
+    dispose()
+  })
+
+  it('supports custom host tag name on ReactIsland', async () => {
+    function Label(props: { text: string }) {
+      return React.createElement('p', { id: 'island-custom-host' }, props.text)
+    }
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: ReactIsland,
+        props: {
+          component: Label,
+          tagName: 'article',
+          props: { text: 'custom' },
+        },
+      }),
+      container,
+    )
+    await tick()
+
+    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+    expect(host).not.toBeNull()
+    expect(host?.tagName).toBe('ARTICLE')
+    expect(container.querySelector('#island-custom-host')?.textContent).toBe('custom')
 
     dispose()
   })

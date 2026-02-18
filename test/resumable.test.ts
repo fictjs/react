@@ -297,6 +297,38 @@ describe('reactify$', () => {
       dispose()
     }
   })
+
+  it('uses a custom host tag name when configured', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const Remote = reactify$<{ label: string; count: number }>({
+      module: fixtureModule,
+      export: 'LoaderComponent',
+      ssr: false,
+      tagName: 'section',
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: Remote,
+        props: { label: 'host-tag', count: 8 },
+      }),
+      container,
+    )
+    try {
+      const host = container.querySelector('[data-fict-react]') as HTMLElement | null
+      expect(host).not.toBeNull()
+      expect(host?.tagName).toBe('SECTION')
+
+      await waitForExpectation(() => {
+        expect(container.textContent).toContain('host-tag:8')
+      })
+    } finally {
+      dispose()
+    }
+  })
 })
 
 describe('installReactIslands', () => {

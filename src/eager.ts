@@ -24,7 +24,13 @@ interface NormalizedReactInteropOptions {
   events: string[]
   visibleRootMargin: string
   identifierPrefix: string
+  tagName: string
   actionProps: string[]
+}
+
+function normalizeHostTagName(tagName: string | undefined): string {
+  const normalized = tagName?.trim()
+  return normalized && normalized.length > 0 ? normalized : 'div'
 }
 
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
@@ -40,6 +46,7 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
     events,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
+    tagName: normalizeHostTagName(options?.tagName),
     actionProps,
   }
 }
@@ -165,7 +172,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   }
 
   return {
-    type: 'div',
+    type: normalized.tagName,
     props: hostProps,
   }
 }
@@ -196,6 +203,9 @@ export function ReactIsland<P extends Record<string, unknown>>(props: ReactIslan
   }
   if (props.identifierPrefix !== undefined) {
     islandOptions.identifierPrefix = props.identifierPrefix
+  }
+  if (props.tagName !== undefined) {
+    islandOptions.tagName = props.tagName
   }
   if (props.actionProps !== undefined) {
     islandOptions.actionProps = props.actionProps

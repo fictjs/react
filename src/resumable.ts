@@ -34,10 +34,16 @@ interface NormalizedReactInteropOptions {
   events: string[]
   visibleRootMargin: string
   identifierPrefix: string
+  tagName: string
   actionProps: string[]
 }
 
 type ReactComponentModule = Record<string, unknown>
+
+function normalizeHostTagName(tagName: string | undefined): string {
+  const normalized = tagName?.trim()
+  return normalized && normalized.length > 0 ? normalized : 'div'
+}
 
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
@@ -52,6 +58,7 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
     events,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
+    tagName: normalizeHostTagName(options?.tagName),
     actionProps,
   }
 }
@@ -286,7 +293,7 @@ export function reactify$<P extends Record<string, unknown>>(
     }
 
     return {
-      type: 'div',
+      type: normalized.tagName,
       props: hostProps,
     }
   }

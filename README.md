@@ -214,6 +214,7 @@ Wraps a React component as a Fict component. Props flow reactively from the Fict
 | `event`             | `string \| string[]` | —         | Event names for `client: 'event'` mounts      |
 | `visibleRootMargin` | `string`             | `'200px'` | Margin for `'visible'` strategy               |
 | `identifierPrefix`  | `string`             | `''`      | React `useId` prefix for multi-root pages     |
+| `tagName`           | `string`             | `'div'`   | Host element tag used by the island wrapper   |
 | `actionProps`       | `string[]`           | `[]`      | Additional callback prop names to materialize |
 
 ### `ReactIsland<P>(props)`

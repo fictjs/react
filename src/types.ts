@@ -34,6 +34,11 @@ export interface ReactInteropOptions {
    */
   identifierPrefix?: string
   /**
+   * Host element tag used by Fict wrappers (`reactify`, `ReactIsland`, `reactify$`).
+   * @default 'div'
+   */
+  tagName?: string
+  /**
    * Additional prop names that should be treated as action callbacks.
    * By default only /^on[A-Z]/ props are materialized.
    */
