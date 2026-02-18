@@ -16,13 +16,26 @@ import { mountReactRoot, type MountedReactRoot } from './react-root'
 import { scheduleByClientDirective } from './strategy'
 import type { ReactIslandProps, ReactInteropOptions } from './types'
 
-function normalizeOptions(options?: ReactInteropOptions): Required<ReactInteropOptions> {
+interface NormalizedReactInteropOptions {
+  client: NonNullable<ReactInteropOptions['client']>
+  ssr: boolean
+  visibleRootMargin: string
+  identifierPrefix: string
+  actionProps: string[]
+}
+
+function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
+  const actionProps = Array.from(
+    new Set((options?.actionProps ?? []).map(name => name.trim()).filter(Boolean)),
+  )
+
   return {
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
+    actionProps,
   }
 }
 
@@ -82,7 +95,10 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   }
 
   if (isSSR && normalized.ssr) {
-    const ssrNode = createReactElement(runtime.component, materializeReactProps(latestProps))
+    const ssrNode = createReactElement(
+      runtime.component,
+      materializeReactProps(latestProps, normalized.actionProps),
+    )
     hostProps.dangerouslySetInnerHTML = { __html: renderToString(ssrNode) }
   }
 
@@ -90,7 +106,9 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
     createEffect(() => {
       latestProps = runtime.readProps()
       if (root) {
-        root.render(createReactElement(runtime.component, materializeReactProps(latestProps)))
+        root.render(
+          createReactElement(runtime.component, materializeReactProps(latestProps, normalized.actionProps)),
+        )
       }
     })
 
@@ -100,7 +118,10 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
 
       const mount = () => {
         if (!host || root) return
-        const node = createReactElement(runtime.component, materializeReactProps(latestProps))
+        const node = createReactElement(
+          runtime.component,
+          materializeReactProps(latestProps, normalized.actionProps),
+        )
         const mountOptions = normalized.identifierPrefix
           ? {
               hydrate: normalized.ssr && normalized.client !== 'only',
@@ -163,6 +184,9 @@ export function ReactIsland<P extends Record<string, unknown>>(props: ReactIslan
   }
   if (props.identifierPrefix !== undefined) {
     islandOptions.identifierPrefix = props.identifierPrefix
+  }
+  if (props.actionProps !== undefined) {
+    islandOptions.actionProps = props.actionProps
   }
 
   return createReactHost({

@@ -2,6 +2,7 @@ import { createElement as createReactElement, type ComponentType } from 'react'
 
 import { materializeReactProps } from './action'
 import {
+  DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
   DATA_FICT_REACT_MOUNTED,
   DATA_FICT_REACT_PREFIX,
@@ -63,8 +64,26 @@ function readSerializedProps(host: HTMLElement): Record<string, unknown> {
   return decodePropsFromAttribute(host.getAttribute(DATA_FICT_REACT_PROPS))
 }
 
+function readActionProps(host: HTMLElement): string[] {
+  const encoded = host.getAttribute(DATA_FICT_REACT_ACTION_PROPS)
+  if (!encoded) return []
+
+  try {
+    const decoded = decodeURIComponent(encoded)
+    const parsed = JSON.parse(decoded) as unknown
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .filter((item): item is string => typeof item === 'string')
+      .map(name => name.trim())
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
 function readRenderableProps(host: HTMLElement): Record<string, unknown> {
-  return materializeReactProps(readSerializedProps(host))
+  return materializeReactProps(readSerializedProps(host), readActionProps(host))
 }
 
 function readIdentifierPrefix(host: HTMLElement): string | undefined {
@@ -226,7 +245,10 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
       for (const mutation of mutations) {
         if (mutation.type === 'attributes' && mutation.target instanceof HTMLElement) {
           const target = mutation.target
-          if (mutation.attributeName === DATA_FICT_REACT_PROPS) {
+          if (
+            mutation.attributeName === DATA_FICT_REACT_PROPS ||
+            mutation.attributeName === DATA_FICT_REACT_ACTION_PROPS
+          ) {
             runtimes.get(target)?.refresh()
             continue
           }
@@ -261,7 +283,7 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: [DATA_FICT_REACT_PROPS, DATA_FICT_REACT_QRL],
+      attributeFilter: [DATA_FICT_REACT_PROPS, DATA_FICT_REACT_QRL, DATA_FICT_REACT_ACTION_PROPS],
     })
   }
 

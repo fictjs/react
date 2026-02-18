@@ -131,6 +131,45 @@ describe('reactify$', () => {
 
     dispose()
   })
+
+  it('materializes configured non-onX action props from reactify$ options', async () => {
+    const componentModule = new URL('./fixtures/custom-action-component.tsx', import.meta.url).href
+    const actionModule = new URL('./fixtures/react-action-handler.ts', import.meta.url).href
+    const actionHost = globalThis as { __FICT_REACT_ACTION_CALLS__?: string[] }
+    actionHost.__FICT_REACT_ACTION_CALLS__ = []
+
+    const CustomActionIsland = reactify$<{
+      label: string
+      submitAction: ReturnType<typeof reactAction$>
+    }>({
+      module: componentModule,
+      export: 'CustomActionComponent',
+      ssr: false,
+      actionProps: ['submitAction'],
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: CustomActionIsland,
+        props: {
+          label: 'option',
+          submitAction: reactAction$(actionModule, 'recordReactAction'),
+        },
+      }),
+      container,
+    )
+    await tick(30)
+
+    ;(container.querySelector('#custom-action-button') as HTMLButtonElement).click()
+    await tick(30)
+
+    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:option'])
+
+    dispose()
+  })
 })
 
 describe('installReactIslands', () => {
@@ -236,6 +275,37 @@ describe('installReactIslands', () => {
     await tick(30)
 
     expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:loader'])
+
+    stop()
+  })
+
+  it('loader materializes configured non-onX action props from host attributes', async () => {
+    const componentModule = new URL('./fixtures/custom-action-component.tsx', import.meta.url).href
+    const actionModule = new URL('./fixtures/react-action-handler.ts', import.meta.url).href
+    const actionHost = globalThis as { __FICT_REACT_ACTION_CALLS__?: string[] }
+    actionHost.__FICT_REACT_ACTION_CALLS__ = []
+
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${componentModule}#CustomActionComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute('data-fict-react-action-props', encodeURIComponent(JSON.stringify(['submitAction'])))
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({
+        label: 'loader-option',
+        submitAction: reactAction$(actionModule, 'recordReactAction'),
+      }),
+    )
+    document.body.appendChild(host)
+
+    const stop = installReactIslands()
+    await tick(30)
+
+    ;(host.querySelector('#custom-action-button') as HTMLButtonElement).click()
+    await tick(30)
+
+    expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:loader-option'])
 
     stop()
   })

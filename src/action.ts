@@ -4,16 +4,39 @@ import { parseQrl, resolveModuleUrl } from './qrl'
 import type { ReactActionRef } from './types'
 
 const ACTION_KEY = '__fictReactAction'
+const ACTION_PROP_PATTERN = /^on[A-Z]/
+
 const moduleCache = new Map<string, Promise<Record<string, unknown>>>()
+const actionHandlerCache = new Map<string, (...args: unknown[]) => void>()
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (!isRecord(value)) return false
-  const proto = Object.getPrototypeOf(value)
-  return proto === Object.prototype || proto === null
+function copyOwnRecord(source: Record<string | symbol, unknown>): Record<string | symbol, unknown> {
+  const out: Record<string | symbol, unknown> = {}
+  for (const key of Reflect.ownKeys(source)) {
+    out[key] = source[key]
+  }
+  return out
+}
+
+function toActionPropSet(actionProps: readonly string[] | undefined): Set<string> {
+  const set = new Set<string>()
+  if (!actionProps) return set
+
+  for (const name of actionProps) {
+    if (typeof name !== 'string') continue
+    const trimmed = name.trim()
+    if (!trimmed) continue
+    set.add(trimmed)
+  }
+
+  return set
+}
+
+function shouldMaterializeActionProp(propName: string, actionProps: Set<string>): boolean {
+  return ACTION_PROP_PATTERN.test(propName) || actionProps.has(propName)
 }
 
 async function invokeReactAction(qrl: string, args: unknown[]): Promise<void> {
@@ -41,13 +64,21 @@ async function invokeReactAction(qrl: string, args: unknown[]): Promise<void> {
 }
 
 function toActionHandler(qrl: string): (...args: unknown[]) => void {
-  return (...args: unknown[]) => {
+  const cached = actionHandlerCache.get(qrl)
+  if (cached) {
+    return cached
+  }
+
+  const handler = (...args: unknown[]) => {
     void invokeReactAction(qrl, args).catch(error => {
       if (typeof console !== 'undefined' && typeof console.error === 'function') {
         console.error('[fict/react] Failed to execute React action.', error)
       }
     })
   }
+
+  actionHandlerCache.set(qrl, handler)
+  return handler
 }
 
 export function isReactActionRef(value: unknown): value is ReactActionRef {
@@ -64,42 +95,31 @@ export function reactAction$(moduleId: string, exportName = 'default'): ReactAct
   return reactActionFromQrl(__fictQrl(moduleId, exportName))
 }
 
-function materializeValue(value: unknown, seen: WeakMap<object, unknown>): unknown {
-  if (isReactActionRef(value)) {
-    return toActionHandler(value.__fictReactAction)
+export function materializeReactProps<T>(
+  value: T,
+  actionProps: readonly string[] | undefined = undefined,
+): T {
+  if (!isRecord(value) || Array.isArray(value)) {
+    return value
   }
 
-  if (Array.isArray(value)) {
-    if (seen.has(value)) {
-      return seen.get(value)
-    }
+  const src = value as Record<string | symbol, unknown>
+  const actionPropSet = toActionPropSet(actionProps)
 
-    const next: unknown[] = []
-    seen.set(value, next)
-    for (const item of value) {
-      next.push(materializeValue(item, seen))
+  let next: Record<string | symbol, unknown> | null = null
+
+  for (const key of Reflect.ownKeys(src)) {
+    if (typeof key !== 'string') continue
+    if (!shouldMaterializeActionProp(key, actionPropSet)) continue
+
+    const current = src[key]
+    if (!isReactActionRef(current)) continue
+
+    if (next === null) {
+      next = copyOwnRecord(src)
     }
-    return next
+    next[key] = toActionHandler(current.__fictReactAction)
   }
 
-  if (isPlainObject(value)) {
-    if (seen.has(value)) {
-      return seen.get(value)
-    }
-
-    const next: Record<string, unknown> = {}
-    seen.set(value, next)
-
-    for (const key of Object.keys(value)) {
-      next[key] = materializeValue(value[key], seen)
-    }
-
-    return next
-  }
-
-  return value
-}
-
-export function materializeReactProps<T>(value: T): T {
-  return materializeValue(value, new WeakMap()) as T
+  return (next ?? value) as T
 }

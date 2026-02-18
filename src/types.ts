@@ -23,6 +23,11 @@ export interface ReactInteropOptions {
    * Stable React identifier prefix for useId in multi-root pages.
    */
   identifierPrefix?: string
+  /**
+   * Additional prop names that should be treated as action callbacks.
+   * By default only /^on[A-Z]/ props are materialized.
+   */
+  actionProps?: string[]
 }
 
 export type MaybeAccessor<T> = T | (() => T)

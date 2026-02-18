@@ -5,6 +5,7 @@ import { renderToString } from 'react-dom/server'
 
 import { materializeReactProps } from './action'
 import {
+  DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
   DATA_FICT_REACT_HOST,
   DATA_FICT_REACT_MOUNTED,
@@ -20,13 +21,26 @@ import { encodePropsForAttribute } from './serialization'
 import { scheduleByClientDirective } from './strategy'
 import type { ReactInteropOptions, ReactifyQrlOptions } from './types'
 
-function normalizeOptions(options?: ReactInteropOptions): Required<ReactInteropOptions> {
+interface NormalizedReactInteropOptions {
+  client: NonNullable<ReactInteropOptions['client']>
+  ssr: boolean
+  visibleRootMargin: string
+  identifierPrefix: string
+  actionProps: string[]
+}
+
+function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
+  const actionProps = Array.from(
+    new Set((options?.actionProps ?? []).map(name => name.trim()).filter(Boolean)),
+  )
+
   return {
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
+    actionProps,
   }
 }
 
@@ -120,9 +134,17 @@ export function reactify$<P extends Record<string, unknown>>(
     if (normalized.identifierPrefix) {
       hostProps[DATA_FICT_REACT_PREFIX] = normalized.identifierPrefix
     }
+    if (normalized.actionProps.length > 0) {
+      hostProps[DATA_FICT_REACT_ACTION_PROPS] = encodeURIComponent(
+        JSON.stringify(normalized.actionProps),
+      )
+    }
 
     if (isSSR && normalized.ssr && resolvedComponent) {
-      const ssrNode = createReactElement(resolvedComponent, materializeReactProps(latestProps))
+      const ssrNode = createReactElement(
+        resolvedComponent,
+        materializeReactProps(latestProps, normalized.actionProps),
+      )
       hostProps.dangerouslySetInnerHTML = { __html: renderToString(ssrNode) }
     }
 
@@ -132,7 +154,12 @@ export function reactify$<P extends Record<string, unknown>>(
         syncSerializedPropsToHost()
 
         if (root && resolvedComponent) {
-          root.render(createReactElement(resolvedComponent, materializeReactProps(latestProps)))
+          root.render(
+            createReactElement(
+              resolvedComponent,
+              materializeReactProps(latestProps, normalized.actionProps),
+            ),
+          )
         }
       })
 
@@ -147,7 +174,10 @@ export function reactify$<P extends Record<string, unknown>>(
             const component = await ensureComponent()
             if (!host || !active || root) return
 
-            const node = createReactElement(component, materializeReactProps(latestProps))
+            const node = createReactElement(
+              component,
+              materializeReactProps(latestProps, normalized.actionProps),
+            )
             const mountOptions = normalized.identifierPrefix
               ? {
                   hydrate: normalized.ssr && normalized.client !== 'only',
