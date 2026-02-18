@@ -1,6 +1,25 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { materializeReactProps, reactActionFromQrl } from '../src/action'
+import {
+  __resetReactActionCachesForTests,
+  __setReactActionModuleLoaderForTests,
+  materializeReactProps,
+  reactActionFromQrl,
+} from '../src/action'
+
+const flushMicrotasks = async () => {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
+const tick = async (ms = 0) => {
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+afterEach(() => {
+  __resetReactActionCachesForTests()
+  vi.useRealTimers()
+})
 
 describe('materializeReactProps', () => {
   it('returns original props object when no action callback prop exists', () => {
@@ -41,5 +60,46 @@ describe('materializeReactProps', () => {
 
     const withConfig = materializeReactProps(props, ['submitAction'])
     expect(typeof withConfig.submitAction).toBe('function')
+  })
+
+  it('clears failed import cache and retries after backoff cooldown', async () => {
+    const actionCalls: string[] = []
+    let attempts = 0
+    __setReactActionModuleLoaderForTests(async () => {
+      attempts += 1
+      if (attempts === 1) {
+        throw new Error('first-load-failure')
+      }
+      return {
+        run(payload: string) {
+          actionCalls.push(payload)
+        },
+      }
+    })
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const props = materializeReactProps({
+      onAction: reactActionFromQrl('/mock/module.js#run'),
+    })
+    const onAction = props.onAction as (payload: string) => void
+
+    onAction('first')
+    await flushMicrotasks()
+    expect(attempts).toBe(1)
+    expect(actionCalls).toEqual([])
+
+    onAction('second')
+    await flushMicrotasks()
+    expect(attempts).toBe(1)
+
+    await tick(110)
+    onAction('third')
+    await flushMicrotasks()
+    await tick(0)
+
+    expect(attempts).toBe(2)
+    expect(actionCalls).toEqual(['third'])
+
+    consoleSpy.mockRestore()
   })
 })

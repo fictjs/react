@@ -5,9 +5,15 @@ import type { ReactActionRef } from './types'
 
 const ACTION_KEY = '__fictReactAction'
 const ACTION_PROP_PATTERN = /^on[A-Z]/
+const RETRY_BASE_DELAY_MS = 100
+const RETRY_MAX_DELAY_MS = 5_000
 
 const moduleCache = new Map<string, Promise<Record<string, unknown>>>()
+const moduleRetryState = new Map<string, { failures: number; nextRetryAt: number }>()
 const actionHandlerCache = new Map<string, (...args: unknown[]) => void>()
+const defaultActionModuleLoader = (resolvedUrl: string) =>
+  import(/* @vite-ignore */ resolvedUrl) as Promise<Record<string, unknown>>
+let actionModuleLoader = defaultActionModuleLoader
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -39,6 +45,42 @@ function shouldMaterializeActionProp(propName: string, actionProps: Set<string>)
   return ACTION_PROP_PATTERN.test(propName) || actionProps.has(propName)
 }
 
+function retryDelayMs(failures: number): number {
+  return Math.min(RETRY_BASE_DELAY_MS * 2 ** Math.max(0, failures - 1), RETRY_MAX_DELAY_MS)
+}
+
+async function loadActionModule(resolvedUrl: string): Promise<Record<string, unknown>> {
+  const retry = moduleRetryState.get(resolvedUrl)
+  const now = Date.now()
+  if (retry && retry.nextRetryAt > now) {
+    const waitMs = retry.nextRetryAt - now
+    throw new Error(
+      `[fict/react] React action module "${resolvedUrl}" load cooldown active; retry in ${waitMs}ms.`,
+    )
+  }
+
+  let modPromise = moduleCache.get(resolvedUrl)
+  if (!modPromise) {
+    modPromise = actionModuleLoader(resolvedUrl)
+      .then(mod => {
+        moduleRetryState.delete(resolvedUrl)
+        return mod
+      })
+      .catch(error => {
+        moduleCache.delete(resolvedUrl)
+        const failures = (moduleRetryState.get(resolvedUrl)?.failures ?? 0) + 1
+        moduleRetryState.set(resolvedUrl, {
+          failures,
+          nextRetryAt: Date.now() + retryDelayMs(failures),
+        })
+        throw error
+      })
+    moduleCache.set(resolvedUrl, modPromise)
+  }
+
+  return modPromise
+}
+
 async function invokeReactAction(qrl: string, args: unknown[]): Promise<void> {
   const { url, exportName } = parseQrl(qrl)
   if (!url) {
@@ -46,13 +88,7 @@ async function invokeReactAction(qrl: string, args: unknown[]): Promise<void> {
   }
 
   const resolvedUrl = resolveModuleUrl(url)
-  let modPromise = moduleCache.get(resolvedUrl)
-  if (!modPromise) {
-    modPromise = import(/* @vite-ignore */ resolvedUrl) as Promise<Record<string, unknown>>
-    moduleCache.set(resolvedUrl, modPromise)
-  }
-
-  const mod = await modPromise
+  const mod = await loadActionModule(resolvedUrl)
   const candidate = (mod[exportName] ?? mod.default) as unknown
   if (typeof candidate !== 'function') {
     throw new Error(
@@ -93,6 +129,19 @@ export function reactActionFromQrl(qrl: string): ReactActionRef {
 
 export function reactAction$(moduleId: string, exportName = 'default'): ReactActionRef {
   return reactActionFromQrl(__fictQrl(moduleId, exportName))
+}
+
+export function __setReactActionModuleLoaderForTests(
+  loader: ((resolvedUrl: string) => Promise<Record<string, unknown>>) | null,
+): void {
+  actionModuleLoader = loader ?? defaultActionModuleLoader
+}
+
+export function __resetReactActionCachesForTests(): void {
+  moduleCache.clear()
+  moduleRetryState.clear()
+  actionHandlerCache.clear()
+  actionModuleLoader = defaultActionModuleLoader
 }
 
 export function materializeReactProps<T>(
