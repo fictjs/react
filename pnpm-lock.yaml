@@ -12,8 +12,8 @@ importers:
         specifier: ^9.39.2
         version: 9.39.2
       '@fictjs/runtime':
-        specifier: file:../packages/runtime
-        version: file:../packages/runtime
+        specifier: ^0.10.0
+        version: 0.10.0
       '@playwright/test':
         specifier: ^1.58.0
         version: 1.58.2
@@ -410,8 +410,8 @@ packages:
       '@noble/hashes':
         optional: true
 
-  '@fictjs/runtime@file:../packages/runtime':
-    resolution: {directory: ../packages/runtime, type: directory}
+  '@fictjs/runtime@0.10.0':
+    resolution: {integrity: sha512-tgYx1jUNOFwyZjf7kErYo1mgipN1p1jlnh9OZTbcRE58dFnEQUZfK13VB8pjz5m/VBhzsXzo7uWC8ZENurRKeQ==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -2063,7 +2063,7 @@ snapshots:
 
   '@exodus/bytes@1.14.1': {}
 
-  '@fictjs/runtime@file:../packages/runtime': {}
+  '@fictjs/runtime@0.10.0': {}
 
   '@humanfs/core@0.19.1': {}
 
