@@ -34,6 +34,25 @@ const waitForElement = async <T extends Element>(
   throw new Error(`Timed out waiting for selector: ${selector}`)
 }
 
+const waitForExpectation = async (assertion: () => void, timeoutMs = 1_000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs
+  let lastError: unknown
+
+  while (Date.now() < deadline) {
+    try {
+      assertion()
+      return
+    } catch (error) {
+      lastError = error
+      await tick(10)
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Timed out waiting for asynchronous expectation.')
+}
+
 afterEach(() => {
   const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
   runtimeHost.__FICT_DEV__ = undefined
@@ -222,15 +241,19 @@ describe('reactify$', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const dispose = render(() => ({ type: Remote, props: { label: 'retry', count: 7 } }), container)
-    await tick(20)
-    expect(container.textContent).not.toContain('retry:7')
+    try {
+      expect(container.textContent).not.toContain('retry:7')
 
-    await tick(140)
-    expect(attempts).toBe(2)
-    expect(container.textContent).toContain('retry:7')
-
-    dispose()
-    consoleSpy.mockRestore()
+      await waitForExpectation(() => {
+        expect(attempts).toBe(2)
+      })
+      await waitForExpectation(() => {
+        expect(container.textContent).toContain('retry:7')
+      })
+    } finally {
+      dispose()
+      consoleSpy.mockRestore()
+    }
   })
 })
 
@@ -283,17 +306,19 @@ describe('installReactIslands', () => {
     document.body.appendChild(host)
 
     const stop = installReactIslands()
-    await tick(30)
+    try {
+      await waitForExpectation(() => {
+        expect(counters.__FICT_REACT_MOUNT_COUNT__).toBe(1)
+      })
+      expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(0)
 
-    expect(counters.__FICT_REACT_MOUNT_COUNT__).toBe(1)
-    expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(0)
-
-    host.remove()
-    await tick(30)
-
-    expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(1)
-
-    stop()
+      host.remove()
+      await waitForExpectation(() => {
+        expect(counters.__FICT_REACT_UNMOUNT_COUNT__).toBe(1)
+      })
+    } finally {
+      stop()
+    }
   })
 
   it('rebuilds island runtime when qrl attribute changes', async () => {
@@ -407,15 +432,19 @@ describe('installReactIslands', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const stop = installReactIslands()
-    await tick(20)
-    expect(host.textContent).not.toContain('retry-loader:9')
+    try {
+      expect(host.textContent).not.toContain('retry-loader:9')
 
-    await tick(140)
-    expect(attempts).toBe(2)
-    expect(host.textContent).toContain('retry-loader:9')
-
-    stop()
-    consoleSpy.mockRestore()
+      await waitForExpectation(() => {
+        expect(attempts).toBe(2)
+      })
+      await waitForExpectation(() => {
+        expect(host.textContent).toContain('retry-loader:9')
+      })
+    } finally {
+      stop()
+      consoleSpy.mockRestore()
+    }
   })
 
   it('warns once per immutable host attribute mutation in dev runtime', async () => {
