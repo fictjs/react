@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/@fictjs/react.svg)](https://www.npmjs.com/package/@fictjs/react)
 ![license](https://img.shields.io/npm/l/@fictjs/react)
 
-React interoperability layer for [Fict](https://github.com/nicepkg/fict) — embed React components inside Fict applications as controlled islands with SSR, lazy loading, and fine-grained prop reactivity.
+React interoperability layer for [Fict](https://github.com/fictjs/fict) — embed React components inside Fict applications as controlled islands with SSR, lazy loading, and fine-grained prop reactivity.
 
 ## Why
 
@@ -24,7 +24,7 @@ Fict uses its own compiler-driven reactivity model. When you need to reuse an ex
 ## Install
 
 ```bash
-pnpm add @fictjs/react react react-dom @fictjs/runtime
+pnpm add @fictjs/react @fictjs/runtime react react-dom
 ```
 
 For the Vite preset (optional):
