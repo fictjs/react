@@ -6,6 +6,7 @@ import type { ReactActionRef } from './types'
 const ACTION_MARKER_KEY = '__fictReactActionMarker'
 const ACTION_QRL_KEY = '__fictReactActionQrl'
 const ACTION_MARKER = 'fict.react.action.v1'
+const LEGACY_ACTION_QRL_KEY = '__fictReactAction'
 const ACTION_PROP_PATTERN = /^on[A-Z]/
 const RETRY_BASE_DELAY_MS = 100
 const RETRY_MAX_DELAY_MS = 5_000
@@ -120,11 +121,27 @@ function toActionHandler(qrl: string): (...args: unknown[]) => void {
 }
 
 export function isReactActionRef(value: unknown): value is ReactActionRef {
-  return (
-    isRecord(value) &&
-    value[ACTION_MARKER_KEY] === ACTION_MARKER &&
-    typeof value[ACTION_QRL_KEY] === 'string'
-  )
+  return readReactActionQrl(value) !== null
+}
+
+function readReactActionQrl(value: unknown): string | null {
+  if (!isRecord(value)) {
+    return null
+  }
+
+  if (value[ACTION_MARKER_KEY] === ACTION_MARKER && typeof value[ACTION_QRL_KEY] === 'string') {
+    return value[ACTION_QRL_KEY] as string
+  }
+
+  const ownKeys = Reflect.ownKeys(value)
+  if (ownKeys.length === 1 && ownKeys[0] === LEGACY_ACTION_QRL_KEY) {
+    const legacyQrl = value[LEGACY_ACTION_QRL_KEY]
+    if (typeof legacyQrl === 'string') {
+      return legacyQrl
+    }
+  }
+
+  return null
 }
 
 export function reactActionFromQrl(qrl: string): ReactActionRef {
@@ -174,7 +191,9 @@ export function materializeReactProps<T>(
     if (next === null) {
       next = copyOwnRecord(src)
     }
-    next[key] = toActionHandler(current.__fictReactActionQrl)
+    const qrl = readReactActionQrl(current)
+    if (!qrl) continue
+    next[key] = toActionHandler(qrl)
   }
 
   return (next ?? value) as T

@@ -76,6 +76,32 @@ describe('materializeReactProps', () => {
     expect(result.onAction).toBe(fakeActionLike)
   })
 
+  it('keeps a compatibility window for legacy single-key action payloads', () => {
+    const legacyRef = {
+      __fictReactAction: '/mock/module.js#run',
+    }
+    const props = {
+      onAction: legacyRef,
+    }
+
+    const result = materializeReactProps(props)
+    expect(typeof result.onAction).toBe('function')
+  })
+
+  it('ignores legacy-looking objects when additional keys are present', () => {
+    const legacyLike = {
+      __fictReactAction: '/mock/module.js#run',
+      extra: true,
+    }
+    const props = {
+      onAction: legacyLike,
+    }
+
+    const result = materializeReactProps(props)
+    expect(result).toBe(props)
+    expect(result.onAction).toBe(legacyLike)
+  })
+
   it('clears failed import cache and retries after backoff cooldown', async () => {
     const actionCalls: string[] = []
     let attempts = 0
