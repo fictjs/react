@@ -116,4 +116,54 @@ describe('scheduleByClientDirective', () => {
     cleanup()
     expect(disconnectCount).toBeGreaterThan(0)
   })
+
+  it('waits for hover/focus when hover strategy is used', () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective('hover', host, () => {
+      mounted += 1
+    })
+
+    expect(mounted).toBe(0)
+    host.dispatchEvent(new Event('focusin'))
+    expect(mounted).toBe(1)
+
+    cleanup()
+  })
+
+  it('waits for configured events when event strategy is used', () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective(
+      'event',
+      host,
+      () => {
+        mounted += 1
+      },
+      { events: ['custom-ready', 'keydown'] },
+    )
+
+    host.dispatchEvent(new Event('click'))
+    expect(mounted).toBe(0)
+    host.dispatchEvent(new Event('custom-ready'))
+    expect(mounted).toBe(1)
+
+    cleanup()
+  })
+
+  it('defaults event strategy to click when no event names are provided', () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective('event', host, () => {
+      mounted += 1
+    })
+
+    host.dispatchEvent(new Event('click'))
+    expect(mounted).toBe(1)
+
+    cleanup()
+  })
 })

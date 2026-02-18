@@ -190,6 +190,37 @@ describe('reactify', () => {
 
     dispose()
   })
+
+  it('supports event strategy with custom mount events', async () => {
+    const EventIsland = reactify(
+      ({ value }: { value: number }) =>
+        React.createElement('span', { id: 'event-value' }, String(value)),
+      {
+        client: 'event',
+        event: ['custom-ready'],
+        ssr: false,
+      },
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(() => ({ type: EventIsland, props: { value: 3 } }), container)
+    await tick()
+
+    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+    expect(host).not.toBeNull()
+    expect(host?.getAttribute('data-fict-react-client')).toBe('event')
+    expect(host?.getAttribute('data-fict-react-event')).toBe('custom-ready')
+    expect(container.querySelector('#event-value')).toBeNull()
+
+    host?.dispatchEvent(new Event('custom-ready'))
+    await tick()
+
+    expect(container.querySelector('#event-value')?.textContent).toBe('3')
+
+    dispose()
+  })
 })
 
 describe('ReactIsland', () => {

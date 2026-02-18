@@ -5,6 +5,7 @@ import { loadLoaderComponentModule } from './component-module-loader'
 import {
   DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
+  DATA_FICT_REACT_EVENT,
   DATA_FICT_REACT_MOUNTED,
   DATA_FICT_REACT_PREFIX,
   DATA_FICT_REACT_PROPS,
@@ -12,6 +13,7 @@ import {
   DATA_FICT_REACT_SSR,
   DEFAULT_CLIENT_DIRECTIVE,
 } from './constants'
+import { normalizeMountEvents } from './mount-events'
 import { parseQrl, resolveModuleUrl } from './qrl'
 import { mountReactRoot, type MountedReactRoot } from './react-root'
 import { decodePropsFromAttribute } from './serialization'
@@ -98,7 +100,14 @@ function warnImmutableAttrMutation(host: HTMLElement, attrName: string): void {
 }
 
 function isClientDirective(value: string | null | undefined): value is ClientDirective {
-  return value === 'load' || value === 'idle' || value === 'visible' || value === 'only'
+  return (
+    value === 'load' ||
+    value === 'idle' ||
+    value === 'visible' ||
+    value === 'hover' ||
+    value === 'event' ||
+    value === 'only'
+  )
 }
 
 function pickClientDirective(host: HTMLElement, fallback: ClientDirective): ClientDirective {
@@ -162,6 +171,10 @@ function readIdentifierPrefix(host: HTMLElement): string | undefined {
   return value ?? undefined
 }
 
+function readMountEvents(host: HTMLElement): string[] {
+  return normalizeMountEvents(host.getAttribute(DATA_FICT_REACT_EVENT))
+}
+
 function createIslandRuntime(
   host: HTMLElement,
   options: Required<ReactIslandsLoaderOptions>,
@@ -177,6 +190,7 @@ function createIslandRuntime(
   const client = pickClientDirective(host, options.defaultClient)
   const canHydrate = host.getAttribute(DATA_FICT_REACT_SSR) === '1' && client !== 'only'
   const identifierPrefix = readIdentifierPrefix(host)
+  const mountEvents = readMountEvents(host)
 
   let disposed = false
   let root: MountedReactRoot | null = null
@@ -274,8 +288,10 @@ function createIslandRuntime(
     document?: Document
     window?: Window
     visibleRootMargin?: string
+    events?: string[]
   } = {
     document: host.ownerDocument,
+    events: mountEvents,
     visibleRootMargin: options.visibleRootMargin,
   }
   const ownerWindow = host.ownerDocument.defaultView
@@ -378,7 +394,8 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
           if (
             mutation.attributeName === DATA_FICT_REACT_CLIENT ||
             mutation.attributeName === DATA_FICT_REACT_SSR ||
-            mutation.attributeName === DATA_FICT_REACT_PREFIX
+            mutation.attributeName === DATA_FICT_REACT_PREFIX ||
+            mutation.attributeName === DATA_FICT_REACT_EVENT
           ) {
             if (runtimes.has(target)) {
               warnImmutableAttrMutation(target, mutation.attributeName)
@@ -415,6 +432,7 @@ export function installReactIslands(rawOptions: ReactIslandsLoaderOptions = {}):
         DATA_FICT_REACT_CLIENT,
         DATA_FICT_REACT_SSR,
         DATA_FICT_REACT_PREFIX,
+        DATA_FICT_REACT_EVENT,
       ],
     })
   }

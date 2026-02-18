@@ -6,12 +6,14 @@ import { renderToString } from 'react-dom/server'
 import { materializeReactProps } from './action'
 import {
   DATA_FICT_REACT_CLIENT,
+  DATA_FICT_REACT_EVENT,
   DATA_FICT_REACT_HOST,
   DATA_FICT_REACT_MOUNTED,
   DATA_FICT_REACT_PREFIX,
   DATA_FICT_REACT_SSR,
   DEFAULT_CLIENT_DIRECTIVE,
 } from './constants'
+import { normalizeMountEvents } from './mount-events'
 import { mountReactRoot, type MountedReactRoot } from './react-root'
 import { scheduleByClientDirective } from './strategy'
 import type { ReactIslandProps, ReactInteropOptions } from './types'
@@ -19,6 +21,7 @@ import type { ReactIslandProps, ReactInteropOptions } from './types'
 interface NormalizedReactInteropOptions {
   client: NonNullable<ReactInteropOptions['client']>
   ssr: boolean
+  events: string[]
   visibleRootMargin: string
   identifierPrefix: string
   actionProps: string[]
@@ -29,10 +32,12 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
   const actionProps = Array.from(
     new Set((options?.actionProps ?? []).map((name) => name.trim()).filter(Boolean)),
   )
+  const events = normalizeMountEvents(options?.event)
 
   return {
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
+    events,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
     actionProps,
@@ -93,6 +98,9 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   if (normalized.identifierPrefix) {
     hostProps[DATA_FICT_REACT_PREFIX] = normalized.identifierPrefix
   }
+  if (normalized.events.length > 0) {
+    hostProps[DATA_FICT_REACT_EVENT] = normalized.events.join(',')
+  }
 
   if (isSSR && normalized.ssr) {
     const ssrNode = createReactElement(
@@ -139,6 +147,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
       }
 
       mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
+        events: normalized.events,
         visibleRootMargin: normalized.visibleRootMargin,
       })
     })
@@ -190,6 +199,9 @@ export function ReactIsland<P extends Record<string, unknown>>(props: ReactIslan
   }
   if (props.actionProps !== undefined) {
     islandOptions.actionProps = props.actionProps
+  }
+  if (props.event !== undefined) {
+    islandOptions.event = props.event
   }
 
   return createReactHost({

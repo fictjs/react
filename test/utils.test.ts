@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { createReactQrl } from '../src'
 import { isReactActionRef, reactActionFromQrl } from '../src/action'
+import { normalizeMountEvents } from '../src/mount-events'
 import { parseQrl, resolveModuleUrl } from '../src/qrl'
 import { decodePropsFromAttribute, encodePropsForAttribute } from '../src/serialization'
 
@@ -60,6 +61,26 @@ describe('action ref guard', () => {
     expect(isReactActionRef({ __fictReactAction: '/legacy.ts#run', extra: true })).toBe(false)
     expect(isReactActionRef(null)).toBe(false)
     expect(isReactActionRef('')).toBe(false)
+  })
+})
+
+describe('mount event utils', () => {
+  it('normalizes event names from strings and arrays', () => {
+    expect(normalizeMountEvents('click, keydown , focusin')).toEqual([
+      'click',
+      'keydown',
+      'focusin',
+    ])
+    expect(normalizeMountEvents([' click ', 'focusin', 'click'])).toEqual(['click', 'focusin'])
+  })
+
+  it('accepts JSON arrays and ignores malformed payloads', () => {
+    expect(normalizeMountEvents('["custom-ready","custom-ready","blur"]')).toEqual([
+      'custom-ready',
+      'blur',
+    ])
+    expect(normalizeMountEvents('[bad-json')).toEqual(['[bad-json'])
+    expect(normalizeMountEvents(null)).toEqual([])
   })
 })
 

@@ -8,6 +8,7 @@ import { loadResumableComponentModule } from './component-module-loader'
 import {
   DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
+  DATA_FICT_REACT_EVENT,
   DATA_FICT_REACT_HOST,
   DATA_FICT_REACT_MOUNTED,
   DATA_FICT_REACT_PREFIX,
@@ -16,6 +17,7 @@ import {
   DATA_FICT_REACT_SSR,
   DEFAULT_CLIENT_DIRECTIVE,
 } from './constants'
+import { normalizeMountEvents } from './mount-events'
 import { parseQrl, resolveModuleUrl } from './qrl'
 import { mountReactRoot, type MountedReactRoot } from './react-root'
 import { encodePropsForAttribute } from './serialization'
@@ -29,6 +31,7 @@ const COMPONENT_LOAD_RETRY_MAX_FAILURES = 5
 interface NormalizedReactInteropOptions {
   client: NonNullable<ReactInteropOptions['client']>
   ssr: boolean
+  events: string[]
   visibleRootMargin: string
   identifierPrefix: string
   actionProps: string[]
@@ -41,10 +44,12 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
   const actionProps = Array.from(
     new Set((options?.actionProps ?? []).map((name) => name.trim()).filter(Boolean)),
   )
+  const events = normalizeMountEvents(options?.event)
 
   return {
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
+    events,
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
     actionProps,
@@ -178,6 +183,9 @@ export function reactify$<P extends Record<string, unknown>>(
         JSON.stringify(normalized.actionProps),
       )
     }
+    if (normalized.events.length > 0) {
+      hostProps[DATA_FICT_REACT_EVENT] = normalized.events.join(',')
+    }
 
     if (isSSR && normalized.ssr && resolvedComponent) {
       const ssrNode = createReactElement(
@@ -258,6 +266,7 @@ export function reactify$<P extends Record<string, unknown>>(
         }
 
         mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
+          events: normalized.events,
           visibleRootMargin: normalized.visibleRootMargin,
         })
       })

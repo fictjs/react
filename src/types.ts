@@ -4,7 +4,7 @@ import type { ComponentType } from 'react'
 /**
  * Controls when the React island mounts on the client.
  */
-export type ClientDirective = 'load' | 'idle' | 'visible' | 'only'
+export type ClientDirective = 'load' | 'idle' | 'visible' | 'hover' | 'event' | 'only'
 
 export interface ReactInteropOptions {
   /**
@@ -17,6 +17,13 @@ export interface ReactInteropOptions {
    * @default 'load'
    */
   client?: ClientDirective
+  /**
+   * Custom DOM event names that trigger mounting when `client: 'event'`.
+   * String values accept comma-separated names.
+   * @example 'click'
+   * @example ['focusin', 'keydown']
+   */
+  event?: string | string[]
   /**
    * Root margin for visible strategy.
    * @default '200px'

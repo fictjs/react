@@ -193,6 +193,8 @@ Control when each island mounts on the client:
 | `'load'`    | Mount immediately (via microtask). **Default.**                                                                          |
 | `'idle'`    | Mount during idle time (`requestIdleCallback`, falls back to `setTimeout(…, 1)`)                                         |
 | `'visible'` | Mount when the host element enters the viewport (`IntersectionObserver` with configurable `rootMargin`, default `200px`) |
+| `'hover'`   | Mount on first `mouseover` or `focusin` on the host                                                                      |
+| `'event'`   | Mount on configured host events (`event` option or `data-fict-react-event`; defaults to `click`)                         |
 | `'only'`    | Client-only rendering — no SSR, no hydration                                                                             |
 
 When `ssr` is `true` (the default), the React subtree is rendered to HTML on the server. On the client, the island hydrates (`hydrateRoot`) if SSR content is present, otherwise it creates a fresh root (`createRoot`).
@@ -205,13 +207,14 @@ Wraps a React component as a Fict component. Props flow reactively from the Fict
 
 **Options** (`ReactInteropOptions`):
 
-| Option              | Type              | Default   | Description                                   |
-| ------------------- | ----------------- | --------- | --------------------------------------------- |
-| `ssr`               | `boolean`         | `true`    | Server-side render the React subtree          |
-| `client`            | `ClientDirective` | `'load'`  | Client mount strategy                         |
-| `visibleRootMargin` | `string`          | `'200px'` | Margin for `'visible'` strategy               |
-| `identifierPrefix`  | `string`          | `''`      | React `useId` prefix for multi-root pages     |
-| `actionProps`       | `string[]`        | `[]`      | Additional callback prop names to materialize |
+| Option              | Type                 | Default   | Description                                   |
+| ------------------- | -------------------- | --------- | --------------------------------------------- |
+| `ssr`               | `boolean`            | `true`    | Server-side render the React subtree          |
+| `client`            | `ClientDirective`    | `'load'`  | Client mount strategy                         |
+| `event`             | `string \| string[]` | —         | Event names for `client: 'event'` mounts      |
+| `visibleRootMargin` | `string`             | `'200px'` | Margin for `'visible'` strategy               |
+| `identifierPrefix`  | `string`             | `''`      | React `useId` prefix for multi-root pages     |
+| `actionProps`       | `string[]`           | `[]`      | Additional callback prop names to materialize |
 
 ### `ReactIsland<P>(props)`
 
@@ -265,20 +268,21 @@ Returns Vite plugins that scope the React JSX transform to a directory.
 
 When using the loader or resumable mode, the following data attributes control island behavior:
 
-| Attribute                      | Mutable | Purpose                                                |
-| ------------------------------ | ------- | ------------------------------------------------------ |
-| `data-fict-react`              | `*`     | QRL pointing to the React component module             |
-| `data-fict-react-props`        | yes     | URL-encoded serialized props                           |
-| `data-fict-react-action-props` | yes     | URL-encoded JSON array of custom action prop names     |
-| `data-fict-react-client`       | no      | Client strategy (`load` / `idle` / `visible` / `only`) |
-| `data-fict-react-ssr`          | no      | `'1'` if SSR content is present                        |
-| `data-fict-react-prefix`       | no      | React `useId` identifier prefix                        |
-| `data-fict-react-host`         | —       | Marks element as a React island host                   |
-| `data-fict-react-mounted`      | —       | Set to `'1'` after the island mounts                   |
+| Attribute                      | Mutable | Purpose                                                                    |
+| ------------------------------ | ------- | -------------------------------------------------------------------------- |
+| `data-fict-react`              | `*`     | QRL pointing to the React component module                                 |
+| `data-fict-react-props`        | yes     | URL-encoded serialized props                                               |
+| `data-fict-react-action-props` | yes     | URL-encoded JSON array of custom action prop names                         |
+| `data-fict-react-client`       | no      | Client strategy (`load` / `idle` / `visible` / `hover` / `event` / `only`) |
+| `data-fict-react-event`        | no      | Comma-separated mount events for `client="event"`                          |
+| `data-fict-react-ssr`          | no      | `'1'` if SSR content is present                                            |
+| `data-fict-react-prefix`       | no      | React `useId` identifier prefix                                            |
+| `data-fict-react-host`         | —       | Marks element as a React island host                                       |
+| `data-fict-react-mounted`      | —       | Set to `'1'` after the island mounts                                       |
 
 `*` Changing the QRL disposes the current root and creates a new one.
 
-Immutable attributes (`data-fict-react-client`, `data-fict-react-ssr`, `data-fict-react-prefix`) emit a warning in development if mutated at runtime. To change them, recreate the host element.
+Immutable attributes (`data-fict-react-client`, `data-fict-react-ssr`, `data-fict-react-prefix`, `data-fict-react-event`) emit a warning in development if mutated at runtime. To change them, recreate the host element.
 
 ## Package Exports
 

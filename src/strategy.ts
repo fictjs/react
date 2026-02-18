@@ -5,6 +5,7 @@ interface ClientScheduleOptions {
   document?: Document
   window?: Window
   visibleRootMargin?: string
+  events?: string[]
 }
 
 export function scheduleByClientDirective(
@@ -22,6 +23,26 @@ export function scheduleByClientDirective(
     if (mounted || canceled) return
     mounted = true
     mount()
+  }
+
+  const bindHostEvents = (eventNames: readonly string[]) => {
+    const names = eventNames.length > 0 ? eventNames : ['click']
+    const listeners: { name: string; handler: EventListener }[] = []
+
+    for (const name of names) {
+      const handler: EventListener = () => {
+        runMount()
+      }
+      listeners.push({ name, handler })
+      host.addEventListener(name, handler, { once: true })
+    }
+
+    return () => {
+      canceled = true
+      for (const { name, handler } of listeners) {
+        host.removeEventListener(name, handler)
+      }
+    }
   }
 
   const scheduleLoad = () => {
@@ -84,6 +105,14 @@ export function scheduleByClientDirective(
 
     observer.observe(host)
     return () => observer.disconnect()
+  }
+
+  if (strategy === 'hover') {
+    return bindHostEvents(['mouseover', 'focusin'])
+  }
+
+  if (strategy === 'event') {
+    return bindHostEvents(options.events ?? [])
   }
 
   runMount()

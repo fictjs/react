@@ -255,6 +255,44 @@ describe('reactify$', () => {
       consoleSpy.mockRestore()
     }
   })
+
+  it('supports event-triggered mount and serializes event metadata', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const Remote = reactify$<{ label: string; count: number }>({
+      module: fixtureModule,
+      export: 'LoaderComponent',
+      ssr: false,
+      client: 'event',
+      event: ['custom-ready'],
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: Remote,
+        props: { label: 'event-remote', count: 4 },
+      }),
+      container,
+    )
+    try {
+      const host = container.querySelector('[data-fict-react]') as HTMLElement | null
+      expect(host).not.toBeNull()
+      expect(host?.getAttribute('data-fict-react-client')).toBe('event')
+      expect(host?.getAttribute('data-fict-react-event')).toBe('custom-ready')
+
+      await tick(30)
+      expect(container.textContent).not.toContain('event-remote:4')
+
+      host?.dispatchEvent(new Event('custom-ready'))
+      await waitForExpectation(() => {
+        expect(container.textContent).toContain('event-remote:4')
+      })
+    } finally {
+      dispose()
+    }
+  })
 })
 
 describe('installReactIslands', () => {
@@ -447,6 +485,35 @@ describe('installReactIslands', () => {
     }
   })
 
+  it('loader mounts islands only after configured event strategy dispatch', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
+    host.setAttribute('data-fict-react-client', 'event')
+    host.setAttribute('data-fict-react-event', 'custom-ready')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'loader-event', count: 1 }),
+    )
+    document.body.appendChild(host)
+
+    const stop = installReactIslands()
+    try {
+      await tick(30)
+      expect(host.textContent).not.toContain('loader-event:1')
+      expect(host.getAttribute('data-fict-react-mounted')).not.toBe('1')
+
+      host.dispatchEvent(new Event('custom-ready'))
+      await waitForExpectation(() => {
+        expect(host.textContent).toContain('loader-event:1')
+      })
+      expect(host.getAttribute('data-fict-react-mounted')).toBe('1')
+    } finally {
+      stop()
+    }
+  })
+
   it('warns once per immutable host attribute mutation in dev runtime', async () => {
     const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
     const host = document.createElement('div')
@@ -470,9 +537,11 @@ describe('installReactIslands', () => {
       host.setAttribute('data-fict-react-ssr', '1')
       host.setAttribute('data-fict-react-prefix', 'changed')
       host.setAttribute('data-fict-react-prefix', 'changed-again')
+      host.setAttribute('data-fict-react-event', 'hover')
+      host.setAttribute('data-fict-react-event', 'click')
       await tick(30)
 
-      expect(warnSpy).toHaveBeenCalledTimes(3)
+      expect(warnSpy).toHaveBeenCalledTimes(4)
     } finally {
       stop()
       warnSpy.mockRestore()
@@ -504,6 +573,7 @@ describe('installReactIslands', () => {
       host.setAttribute('data-fict-react-client', 'idle')
       host.setAttribute('data-fict-react-ssr', '1')
       host.setAttribute('data-fict-react-prefix', 'prod')
+      host.setAttribute('data-fict-react-event', 'prod-event')
       await tick(30)
 
       expect(warnSpy).not.toHaveBeenCalled()
