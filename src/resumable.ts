@@ -4,6 +4,7 @@ import { createElement as createReactElement, type ComponentType } from 'react'
 import { renderToString } from 'react-dom/server'
 
 import { materializeReactProps } from './action'
+import { loadResumableComponentModule } from './component-module-loader'
 import {
   DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
@@ -34,11 +35,6 @@ interface NormalizedReactInteropOptions {
 }
 
 type ReactComponentModule = Record<string, unknown>
-type ReactComponentModuleLoader = (resolvedUrl: string) => Promise<ReactComponentModule>
-
-const defaultReactComponentModuleLoader: ReactComponentModuleLoader = resolvedUrl =>
-  import(/* @vite-ignore */ resolvedUrl) as Promise<ReactComponentModule>
-let reactComponentModuleLoader = defaultReactComponentModuleLoader
 
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
@@ -75,7 +71,7 @@ async function loadComponentFromQrl<P extends Record<string, unknown>>(
   }
 
   const resolvedUrl = resolveModuleUrl(url)
-  const mod = await reactComponentModuleLoader(resolvedUrl)
+  const mod = (await loadResumableComponentModule(resolvedUrl)) as ReactComponentModule
 
   const candidate = (mod[exportName] ?? mod.default) as unknown
   if (typeof candidate !== 'function') {
@@ -96,16 +92,6 @@ function retryDelayMs(failures: number): number {
 
 export function createReactQrl(moduleId: string, exportName = 'default'): string {
   return __fictQrl(moduleId, exportName)
-}
-
-export function __setResumableComponentModuleLoaderForTests(
-  loader: ReactComponentModuleLoader | null,
-): void {
-  reactComponentModuleLoader = loader ?? defaultReactComponentModuleLoader
-}
-
-export function __resetResumableComponentModuleLoaderForTests(): void {
-  reactComponentModuleLoader = defaultReactComponentModuleLoader
 }
 
 export function reactify$<P extends Record<string, unknown>>(

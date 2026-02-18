@@ -1,6 +1,7 @@
 import { createElement as createReactElement, type ComponentType } from 'react'
 
 import { materializeReactProps } from './action'
+import { loadLoaderComponentModule } from './component-module-loader'
 import {
   DATA_FICT_REACT_ACTION_PROPS,
   DATA_FICT_REACT_CLIENT,
@@ -20,13 +21,6 @@ import type { ClientDirective } from './types'
 const COMPONENT_LOAD_RETRY_BASE_DELAY_MS = 100
 const COMPONENT_LOAD_RETRY_MAX_DELAY_MS = 5_000
 const COMPONENT_LOAD_RETRY_MAX_FAILURES = 5
-
-type ReactComponentModule = Record<string, unknown>
-type ReactComponentModuleLoader = (resolvedUrl: string) => Promise<ReactComponentModule>
-
-const defaultReactComponentModuleLoader: ReactComponentModuleLoader = resolvedUrl =>
-  import(/* @vite-ignore */ resolvedUrl) as Promise<ReactComponentModule>
-let reactComponentModuleLoader = defaultReactComponentModuleLoader
 
 export interface ReactIslandsLoaderOptions {
   document?: Document
@@ -59,7 +53,7 @@ async function loadComponentFromQrl(
   }
 
   const resolvedUrl = resolveModuleUrl(url)
-  const mod = await reactComponentModuleLoader(resolvedUrl)
+  const mod = await loadLoaderComponentModule(resolvedUrl)
   const candidate = (mod[exportName] ?? mod.default) as unknown
 
   if (typeof candidate !== 'function') {
@@ -77,17 +71,6 @@ function retryDelayMs(failures: number): number {
     COMPONENT_LOAD_RETRY_MAX_DELAY_MS,
   )
 }
-
-export function __setLoaderComponentModuleLoaderForTests(
-  loader: ReactComponentModuleLoader | null,
-): void {
-  reactComponentModuleLoader = loader ?? defaultReactComponentModuleLoader
-}
-
-export function __resetLoaderComponentModuleLoaderForTests(): void {
-  reactComponentModuleLoader = defaultReactComponentModuleLoader
-}
-
 function readSerializedProps(host: HTMLElement): Record<string, unknown> {
   return decodePropsFromAttribute(host.getAttribute(DATA_FICT_REACT_PROPS))
 }

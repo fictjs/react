@@ -128,3 +128,8 @@ export default defineConfig({
 - `idle`：空闲时挂载（`requestIdleCallback` 优先）。
 - `visible`：进入视口时挂载（`IntersectionObserver`）。
 - `only`：仅客户端渲染（不走 SSR hydrate）。
+
+## Internal Hooks
+
+- `src/testing.ts` 提供仓库测试用注入 hooks，仅用于本仓库测试。
+- 这些 hooks 属于 internal/unstable，不在包 exports 中，不承诺兼容性。

@@ -5,15 +5,13 @@ import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { installReactIslands, reactAction$, reactify$ } from '../src'
+import { encodePropsForAttribute } from '../src/serialization'
 import {
   __resetLoaderComponentModuleLoaderForTests,
-  __setLoaderComponentModuleLoaderForTests,
-} from '../src/loader'
-import {
   __resetResumableComponentModuleLoaderForTests,
+  __setLoaderComponentModuleLoaderForTests,
   __setResumableComponentModuleLoaderForTests,
-} from '../src/resumable'
-import { encodePropsForAttribute } from '../src/serialization'
+} from '../src/testing'
 
 const tick = async (ms = 0) => {
   await new Promise(resolve => setTimeout(resolve, ms))
