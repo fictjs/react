@@ -17,15 +17,18 @@ export function scheduleByClientDirective(
   const win = options.window ?? doc?.defaultView ?? null
 
   let mounted = false
+  let canceled = false
   const runMount = () => {
-    if (mounted) return
+    if (mounted || canceled) return
     mounted = true
     mount()
   }
 
   const scheduleLoad = () => {
     queueMicrotask(runMount)
-    return () => {}
+    return () => {
+      canceled = true
+    }
   }
 
   if (strategy === 'only' || strategy === 'load') {

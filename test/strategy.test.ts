@@ -28,6 +28,19 @@ describe('scheduleByClientDirective', () => {
     expect(onlyCount).toBe(1)
   })
 
+  it('cancels load mount when cleanup runs before microtask', async () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective('load', host, () => {
+      mounted += 1
+    })
+    cleanup()
+
+    await Promise.resolve()
+    expect(mounted).toBe(0)
+  })
+
   it('uses requestIdleCallback when available', () => {
     const host = document.createElement('div')
     const idleWindow = window as Window & {
