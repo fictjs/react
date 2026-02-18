@@ -62,18 +62,18 @@ function isDevRuntime(): boolean {
     return explicitDevFlag
   }
 
-  const metaEnv = (import.meta as unknown as { env?: Record<string, unknown> }).env
-  if (metaEnv && typeof metaEnv.DEV === 'boolean') {
-    return metaEnv.DEV
-  }
-  if (metaEnv && typeof metaEnv.MODE === 'string') {
-    return metaEnv.MODE !== 'production'
+  if (typeof process !== 'undefined') {
+    const nodeEnv = process.env?.NODE_ENV
+    if (nodeEnv) {
+      return nodeEnv !== 'production'
+    }
   }
 
-  if (typeof process === 'undefined') return false
-  const nodeEnv = process.env?.NODE_ENV
-  if (!nodeEnv) return false
-  return nodeEnv !== 'production'
+  if (typeof document !== 'undefined') {
+    return Boolean(document.querySelector('script[src*="/@vite/client"]'))
+  }
+
+  return false
 }
 
 const warnedImmutableAttrs = new WeakMap<HTMLElement, Set<string>>()
