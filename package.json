@@ -39,7 +39,7 @@
     "dev": "tsup --watch",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf dist coverage"
   },
