@@ -80,4 +80,14 @@ button.addEventListener('click', () => {
 })
 document.body.appendChild(button)
 
+const immutableMutationButton = document.createElement('button')
+immutableMutationButton.id = 'loader-mutate-immutable'
+immutableMutationButton.textContent = 'mutate loader immutable attrs'
+immutableMutationButton.addEventListener('click', () => {
+  loaderHost.setAttribute('data-fict-react-client', 'idle')
+  loaderHost.setAttribute('data-fict-react-ssr', '1')
+  loaderHost.setAttribute('data-fict-react-prefix', 'mutated-prefix')
+})
+document.body.appendChild(immutableMutationButton)
+
 installReactIslands()
