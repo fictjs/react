@@ -1,6 +1,6 @@
 # @fictjs/react
 
-[![Node CI](https://github.com/fictjs/react/actions/workflows/CI/badge.svg)](https://github.com/fictjs/react/actions/workflows/ci.yml)
+[![CI](https://github.com/fictjs/react/actions/workflows/ci.yml/badge.svg)](https://github.com/fictjs/react/actions/workflows/ci.yml)
 [![npm](https://img.shields.io/npm/v/@fictjs/react.svg)](https://www.npmjs.com/package/@fictjs/react)
 ![license](https://img.shields.io/npm/l/@fictjs/react)
 
