@@ -22,6 +22,7 @@ interface NormalizedReactInteropOptions {
   client: NonNullable<ReactInteropOptions['client']>
   ssr: boolean
   events: string[]
+  signal: (() => boolean) | null
   visibleRootMargin: string
   identifierPrefix: string
   tagName: string
@@ -31,6 +32,16 @@ interface NormalizedReactInteropOptions {
 function normalizeHostTagName(tagName: string | undefined): string {
   const normalized = tagName?.trim()
   return normalized && normalized.length > 0 ? normalized : 'div'
+}
+
+function normalizeSignalAccessor(signal: ReactInteropOptions['signal']): (() => boolean) | null {
+  if (typeof signal === 'function') {
+    return signal as () => boolean
+  }
+  if (typeof signal === 'boolean') {
+    return () => signal
+  }
+  return null
 }
 
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
@@ -44,6 +55,7 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
     events,
+    signal: normalizeSignalAccessor(options?.signal),
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
     tagName: normalizeHostTagName(options?.tagName),
@@ -91,6 +103,7 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   let host: HTMLElement | null = null
   let root: MountedReactRoot | null = null
   let mountCleanup: (() => void) | null = null
+  let signalMount: (() => void) | null = null
   let latestProps = runtime.readProps()
 
   const hostProps: Record<string, unknown> = {
@@ -120,6 +133,13 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
   if (!isSSR) {
     createEffect(() => {
       latestProps = runtime.readProps()
+
+      const shouldMountFromSignal =
+        normalized.client === 'signal' ? Boolean(normalized.signal?.()) : false
+      if (signalMount && shouldMountFromSignal) {
+        signalMount()
+      }
+
       if (root) {
         root.render(
           createReactElement(
@@ -153,13 +173,22 @@ function createReactHost<P extends Record<string, unknown>>(runtime: ReactHostRu
         host.setAttribute(DATA_FICT_REACT_MOUNTED, '1')
       }
 
-      mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
-        events: normalized.events,
-        visibleRootMargin: normalized.visibleRootMargin,
-      })
+      signalMount = mount
+      if (normalized.client === 'signal') {
+        if (normalized.signal?.()) {
+          mount()
+        }
+        mountCleanup = () => {}
+      } else {
+        mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
+          events: normalized.events,
+          visibleRootMargin: normalized.visibleRootMargin,
+        })
+      }
     })
 
     onCleanup(() => {
+      signalMount = null
       mountCleanup?.()
       mountCleanup = null
       root?.unmount()
@@ -212,6 +241,9 @@ export function ReactIsland<P extends Record<string, unknown>>(props: ReactIslan
   }
   if (props.event !== undefined) {
     islandOptions.event = props.event
+  }
+  if (props.signal !== undefined) {
+    islandOptions.signal = props.signal
   }
 
   return createReactHost({

@@ -79,6 +79,7 @@ function isDevRuntime(): boolean {
 }
 
 const warnedImmutableAttrs = new WeakMap<HTMLElement, Set<string>>()
+const warnedSignalStrategyHosts = new WeakSet<HTMLElement>()
 
 function warnImmutableAttrMutation(host: HTMLElement, attrName: string): void {
   if (!isDevRuntime()) return
@@ -99,6 +100,18 @@ function warnImmutableAttrMutation(host: HTMLElement, attrName: string): void {
   }
 }
 
+function warnUnsupportedSignalStrategy(host: HTMLElement): void {
+  if (!isDevRuntime()) return
+  if (warnedSignalStrategyHosts.has(host)) return
+  warnedSignalStrategyHosts.add(host)
+
+  if (typeof console !== 'undefined' && typeof console.warn === 'function') {
+    console.warn(
+      '[fict/react] Client strategy "signal" is not supported by installReactIslands(); use runtime islands (reactify/reactify$) instead.',
+    )
+  }
+}
+
 function isClientDirective(value: string | null | undefined): value is ClientDirective {
   return (
     value === 'load' ||
@@ -106,6 +119,7 @@ function isClientDirective(value: string | null | undefined): value is ClientDir
     value === 'visible' ||
     value === 'hover' ||
     value === 'event' ||
+    value === 'signal' ||
     value === 'only'
   )
 }
@@ -191,6 +205,10 @@ function createIslandRuntime(
   const canHydrate = host.getAttribute(DATA_FICT_REACT_SSR) === '1' && client !== 'only'
   const identifierPrefix = readIdentifierPrefix(host)
   const mountEvents = readMountEvents(host)
+
+  if (client === 'signal') {
+    warnUnsupportedSignalStrategy(host)
+  }
 
   let disposed = false
   let root: MountedReactRoot | null = null

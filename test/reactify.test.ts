@@ -222,6 +222,57 @@ describe('reactify', () => {
     dispose()
   })
 
+  it('mounts only when signal strategy accessor turns true', async () => {
+    const ready = createSignal(false)
+    const SignalIsland = reactify(
+      ({ value }: { value: string }) => React.createElement('span', { id: 'signal-value' }, value),
+      {
+        client: 'signal',
+        signal: ready,
+        ssr: false,
+      },
+    )
+
+    function App() {
+      return {
+        type: 'div',
+        props: {
+          children: [
+            {
+              type: 'button',
+              props: {
+                id: 'signal-on',
+                onClick: () => ready(true),
+                children: 'signal-on',
+              },
+            },
+            {
+              type: SignalIsland,
+              props: { value: 'mounted-by-signal' },
+            },
+          ],
+        },
+      }
+    }
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(() => ({ type: App, props: {} }), container)
+    await tick()
+
+    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+    expect(host).not.toBeNull()
+    expect(host?.getAttribute('data-fict-react-client')).toBe('signal')
+    expect(container.querySelector('#signal-value')).toBeNull()
+    ;(container.querySelector('#signal-on') as HTMLButtonElement).click()
+    await tick()
+
+    expect(container.querySelector('#signal-value')?.textContent).toBe('mounted-by-signal')
+
+    dispose()
+  })
+
   it('uses a custom host tag name when configured', async () => {
     const CustomHost = reactify(
       ({ value }: { value: string }) => React.createElement('span', { id: 'custom-host' }, value),

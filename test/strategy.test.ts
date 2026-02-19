@@ -166,4 +166,34 @@ describe('scheduleByClientDirective', () => {
 
     cleanup()
   })
+
+  it('does not mount signal strategy when no signal accessor is provided', async () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective('signal', host, () => {
+      mounted += 1
+    })
+    await Promise.resolve()
+
+    expect(mounted).toBe(0)
+    cleanup()
+  })
+
+  it('mounts signal strategy when signal accessor returns true', () => {
+    const host = document.createElement('div')
+    let mounted = 0
+
+    const cleanup = scheduleByClientDirective(
+      'signal',
+      host,
+      () => {
+        mounted += 1
+      },
+      { signal: () => true },
+    )
+
+    expect(mounted).toBe(1)
+    cleanup()
+  })
 })

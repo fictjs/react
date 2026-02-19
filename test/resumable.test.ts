@@ -298,6 +298,42 @@ describe('reactify$', () => {
     }
   })
 
+  it('mounts only when signal strategy accessor turns true', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const ready = createSignal(false)
+    const Remote = reactify$<{ label: string; count: number }>({
+      module: fixtureModule,
+      export: 'LoaderComponent',
+      ssr: false,
+      client: 'signal',
+      signal: ready,
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const dispose = render(
+      () => ({
+        type: Remote,
+        props: { label: 'signal-remote', count: 5 },
+      }),
+      container,
+    )
+    try {
+      const host = container.querySelector('[data-fict-react]') as HTMLElement | null
+      expect(host).not.toBeNull()
+      expect(host?.getAttribute('data-fict-react-client')).toBe('signal')
+      expect(container.textContent).not.toContain('signal-remote:5')
+
+      ready(true)
+      await waitForExpectation(() => {
+        expect(container.textContent).toContain('signal-remote:5')
+      })
+    } finally {
+      dispose()
+    }
+  })
+
   it('uses a custom host tag name when configured', async () => {
     const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
     const Remote = reactify$<{ label: string; count: number }>({
@@ -551,6 +587,38 @@ describe('installReactIslands', () => {
       expect(host.getAttribute('data-fict-react-mounted')).toBe('1')
     } finally {
       stop()
+    }
+  })
+
+  it('loader does not mount signal strategy hosts and warns in dev runtime', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
+    host.setAttribute('data-fict-react-client', 'signal')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'loader-signal', count: 2 }),
+    )
+    document.body.appendChild(host)
+
+    const runtimeHost = globalThis as { __FICT_DEV__?: boolean }
+    const originalDevFlag = runtimeHost.__FICT_DEV__
+    runtimeHost.__FICT_DEV__ = true
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    const stop = installReactIslands()
+    try {
+      await tick(30)
+      expect(host.textContent).not.toContain('loader-signal:2')
+      expect(host.getAttribute('data-fict-react-mounted')).not.toBe('1')
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Client strategy "signal" is not supported'),
+      )
+    } finally {
+      stop()
+      warnSpy.mockRestore()
+      runtimeHost.__FICT_DEV__ = originalDevFlag
     }
   })
 

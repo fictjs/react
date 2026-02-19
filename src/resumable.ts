@@ -32,6 +32,7 @@ interface NormalizedReactInteropOptions {
   client: NonNullable<ReactInteropOptions['client']>
   ssr: boolean
   events: string[]
+  signal: (() => boolean) | null
   visibleRootMargin: string
   identifierPrefix: string
   tagName: string
@@ -45,6 +46,16 @@ function normalizeHostTagName(tagName: string | undefined): string {
   return normalized && normalized.length > 0 ? normalized : 'div'
 }
 
+function normalizeSignalAccessor(signal: ReactInteropOptions['signal']): (() => boolean) | null {
+  if (typeof signal === 'function') {
+    return signal as () => boolean
+  }
+  if (typeof signal === 'boolean') {
+    return () => signal
+  }
+  return null
+}
+
 function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInteropOptions {
   const client = options?.client ?? DEFAULT_CLIENT_DIRECTIVE
   const actionProps = Array.from(
@@ -56,6 +67,7 @@ function normalizeOptions(options?: ReactInteropOptions): NormalizedReactInterop
     client,
     ssr: client === 'only' ? false : options?.ssr !== false,
     events,
+    signal: normalizeSignalAccessor(options?.signal),
     visibleRootMargin: options?.visibleRootMargin ?? '200px',
     identifierPrefix: options?.identifierPrefix ?? '',
     tagName: normalizeHostTagName(options?.tagName),
@@ -119,6 +131,7 @@ export function reactify$<P extends Record<string, unknown>>(
     let host: HTMLElement | null = null
     let root: MountedReactRoot | null = null
     let mountCleanup: (() => void) | null = null
+    let signalMount: (() => void) | null = null
     let active = true
 
     let resolvedComponent: ComponentType<P> | null = options.component ?? null
@@ -207,6 +220,12 @@ export function reactify$<P extends Record<string, unknown>>(
         latestProps = copyProps(rawProps)
         syncSerializedPropsToHost()
 
+        const shouldMountFromSignal =
+          normalized.client === 'signal' ? Boolean(normalized.signal?.()) : false
+        if (signalMount && shouldMountFromSignal) {
+          signalMount()
+        }
+
         if (root && resolvedComponent) {
           root.render(
             createReactElement(
@@ -272,14 +291,23 @@ export function reactify$<P extends Record<string, unknown>>(
           })
         }
 
-        mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
-          events: normalized.events,
-          visibleRootMargin: normalized.visibleRootMargin,
-        })
+        signalMount = mount
+        if (normalized.client === 'signal') {
+          if (normalized.signal?.()) {
+            mount()
+          }
+          mountCleanup = () => {}
+        } else {
+          mountCleanup = scheduleByClientDirective(normalized.client, host, mount, {
+            events: normalized.events,
+            visibleRootMargin: normalized.visibleRootMargin,
+          })
+        }
       })
 
       onCleanup(() => {
         active = false
+        signalMount = null
         mountCleanup?.()
         mountCleanup = null
         clearRetryTimer()

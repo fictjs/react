@@ -4,7 +4,7 @@ import type { ComponentType } from 'react'
 /**
  * Controls when the React island mounts on the client.
  */
-export type ClientDirective = 'load' | 'idle' | 'visible' | 'hover' | 'event' | 'only'
+export type ClientDirective = 'load' | 'idle' | 'visible' | 'hover' | 'event' | 'signal' | 'only'
 
 export interface ReactInteropOptions {
   /**
@@ -24,6 +24,11 @@ export interface ReactInteropOptions {
    * @example ['focusin', 'keydown']
    */
   event?: string | string[]
+  /**
+   * Mount signal used when `client: 'signal'`.
+   * Supports plain booleans and reactive accessors (for example `createSignal(false)`).
+   */
+  signal?: MaybeAccessor<boolean>
   /**
    * Root margin for visible strategy.
    * @default '200px'

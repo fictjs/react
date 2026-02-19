@@ -6,6 +6,7 @@ interface ClientScheduleOptions {
   window?: Window
   visibleRootMargin?: string
   events?: string[]
+  signal?: (() => boolean) | null
 }
 
 export function scheduleByClientDirective(
@@ -113,6 +114,26 @@ export function scheduleByClientDirective(
 
   if (strategy === 'event') {
     return bindHostEvents(options.events ?? [])
+  }
+
+  if (strategy === 'signal') {
+    const readSignal = options.signal
+    if (!readSignal) {
+      return () => {
+        canceled = true
+      }
+    }
+
+    const tryMountFromSignal = () => {
+      if (canceled || mounted) return
+      if (!readSignal()) return
+      runMount()
+    }
+
+    tryMountFromSignal()
+    return () => {
+      canceled = true
+    }
   }
 
   runMount()
