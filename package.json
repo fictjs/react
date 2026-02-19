@@ -50,6 +50,7 @@
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
     "test": "vitest run",
     "test:it": "vitest run --config vitest.it.config.ts",
+    "test:pack-smoke": "bash ./scripts/pack-smoke.sh",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "clean": "rm -rf dist coverage"
