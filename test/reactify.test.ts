@@ -10,6 +10,25 @@ const tick = async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 }
 
+const waitForExpectation = async (assertion: () => void, timeoutMs = 1_000): Promise<void> => {
+  const deadline = Date.now() + timeoutMs
+  let lastError: unknown
+
+  while (Date.now() < deadline) {
+    try {
+      assertion()
+      return
+    } catch (error) {
+      lastError = error
+      await new Promise((resolve) => setTimeout(resolve, 10))
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error('Timed out waiting for asynchronous expectation.')
+}
+
 afterEach(() => {
   document.body.innerHTML = ''
   __fictDisableSSR()
@@ -285,12 +304,12 @@ describe('reactify', () => {
     document.body.appendChild(container)
 
     const dispose = render(() => ({ type: CustomHost, props: { value: 'ok' } }), container)
-    await tick()
-
-    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
-    expect(host).not.toBeNull()
-    expect(host?.tagName).toBe('SECTION')
-    expect(container.querySelector('#custom-host')?.textContent).toBe('ok')
+    await waitForExpectation(() => {
+      const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+      expect(host).not.toBeNull()
+      expect(host?.tagName).toBe('SECTION')
+      expect(container.querySelector('#custom-host')?.textContent).toBe('ok')
+    })
 
     dispose()
   })
@@ -333,13 +352,13 @@ describe('ReactIsland', () => {
     document.body.appendChild(container)
 
     const dispose = render(() => ({ type: App, props: {} }), container)
-    await tick()
-
-    expect(container.querySelector('#island-label')?.textContent).toBe('alpha')
+    await waitForExpectation(() => {
+      expect(container.querySelector('#island-label')?.textContent).toBe('alpha')
+    })
     ;(container.querySelector('#swap') as HTMLButtonElement).click()
-    await tick()
-
-    expect(container.querySelector('#island-label')?.textContent).toBe('beta')
+    await waitForExpectation(() => {
+      expect(container.querySelector('#island-label')?.textContent).toBe('beta')
+    })
 
     dispose()
   })
@@ -363,12 +382,12 @@ describe('ReactIsland', () => {
       }),
       container,
     )
-    await tick()
-
-    const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
-    expect(host).not.toBeNull()
-    expect(host?.tagName).toBe('ARTICLE')
-    expect(container.querySelector('#island-custom-host')?.textContent).toBe('custom')
+    await waitForExpectation(() => {
+      const host = container.querySelector('[data-fict-react-host]') as HTMLElement | null
+      expect(host).not.toBeNull()
+      expect(host?.tagName).toBe('ARTICLE')
+      expect(container.querySelector('#island-custom-host')?.textContent).toBe('custom')
+    })
 
     dispose()
   })
