@@ -4,6 +4,7 @@ interface E2EState {
   lifecycleMounts: number
   lifecycleUnmounts: number
   actionCalls: string[]
+  hydrationNativeClicks: number
 }
 
 declare global {
@@ -18,6 +19,7 @@ function ensureE2EState(): E2EState {
       lifecycleMounts: 0,
       lifecycleUnmounts: 0,
       actionCalls: [],
+      hydrationNativeClicks: 0,
     }
   }
 
@@ -77,4 +79,8 @@ export function LifecycleWidget(props: { label: string }) {
   }, [])
 
   return React.createElement('div', { 'data-testid': 'loader-lifecycle-value' }, props.label)
+}
+
+export function HydrationWidget(props: { label: string }) {
+  return React.createElement('button', { 'data-testid': 'hydration-value' }, props.label)
 }

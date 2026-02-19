@@ -14,6 +14,7 @@ interface E2EState {
   lifecycleMounts: number
   lifecycleUnmounts: number
   actionCalls: string[]
+  hydrationNativeClicks: number
 }
 
 const globalHost = globalThis as typeof globalThis & {
@@ -26,6 +27,7 @@ function ensureE2EState(): E2EState {
       lifecycleMounts: 0,
       lifecycleUnmounts: 0,
       actionCalls: [],
+      hydrationNativeClicks: 0,
     }
   }
 
@@ -36,6 +38,7 @@ const e2eState = ensureE2EState()
 e2eState.lifecycleMounts = 0
 e2eState.lifecycleUnmounts = 0
 e2eState.actionCalls = []
+e2eState.hydrationNativeClicks = 0
 
 const remoteModuleUrl = new URL('./remote-widget.tsx', import.meta.url).href
 
@@ -91,6 +94,15 @@ const EventStrategyIsland = reactify(StrategyView, {
 const VisibleStrategyIsland = reactify(StrategyView, {
   client: 'visible',
   visibleRootMargin: '0px',
+})
+
+const IdleStrategyIsland = reactify(StrategyView, {
+  client: 'idle',
+})
+
+const OnlyStrategyIsland = reactify(StrategyView, {
+  client: 'only',
+  ssr: true,
 })
 
 function App() {
@@ -194,6 +206,24 @@ function App() {
 const app = document.getElementById('app') as HTMLElement
 render(() => ({ type: App, props: {} }), app)
 
+const idleCallbacks = new Map<number, IdleRequestCallback>()
+let idleHandle = 0
+
+const hostWindow = globalHost as typeof globalHost & {
+  requestIdleCallback?: (callback: IdleRequestCallback) => number
+  cancelIdleCallback?: (handle: number) => void
+}
+
+hostWindow.requestIdleCallback = (callback: IdleRequestCallback): number => {
+  idleHandle += 1
+  idleCallbacks.set(idleHandle, callback)
+  return idleHandle
+}
+
+hostWindow.cancelIdleCallback = (handle: number): void => {
+  idleCallbacks.delete(handle)
+}
+
 const hoverRoot = document.createElement('div')
 hoverRoot.id = 'hover-root'
 document.body.appendChild(hoverRoot)
@@ -238,6 +268,34 @@ render(
   visibleRoot,
 )
 
+const idleRoot = document.createElement('div')
+idleRoot.id = 'idle-root'
+document.body.appendChild(idleRoot)
+render(
+  () => ({
+    type: IdleStrategyIsland,
+    props: {
+      testId: 'idle-strategy-value',
+      label: 'idle-mounted',
+    },
+  }),
+  idleRoot,
+)
+
+const onlyRoot = document.createElement('div')
+onlyRoot.id = 'only-root'
+document.body.appendChild(onlyRoot)
+render(
+  () => ({
+    type: OnlyStrategyIsland,
+    props: {
+      testId: 'only-strategy-value',
+      label: 'only-mounted',
+    },
+  }),
+  onlyRoot,
+)
+
 const encode = (value: Record<string, unknown>) => encodeURIComponent(JSON.stringify(value))
 
 function appendControlButton(id: string, text: string, onClick: () => void) {
@@ -252,6 +310,7 @@ const loaderHost = document.getElementById('loader-island') as HTMLElement
 const loaderQrl = `${remoteModuleUrl}#LoaderWidget`
 const loaderAltQrl = `${remoteModuleUrl}#LoaderWidgetAlt`
 const loaderLifecycleQrl = `${remoteModuleUrl}#LifecycleWidget`
+const loaderHydrationQrl = `${remoteModuleUrl}#HydrationWidget`
 let loaderCount = 1
 let dynamicLoaderHost: HTMLElement | null = null
 
@@ -259,6 +318,35 @@ loaderHost.setAttribute('data-fict-react', loaderQrl)
 loaderHost.setAttribute('data-fict-react-client', 'load')
 loaderHost.setAttribute('data-fict-react-ssr', '0')
 loaderHost.setAttribute('data-fict-react-props', encode({ label: 'loader', count: loaderCount }))
+
+const hydrationHost = document.createElement('div')
+hydrationHost.id = 'hydration-loader-island'
+hydrationHost.setAttribute('data-fict-react', loaderHydrationQrl)
+hydrationHost.setAttribute('data-fict-react-client', 'load')
+hydrationHost.setAttribute('data-fict-react-ssr', '1')
+hydrationHost.setAttribute('data-fict-react-props', encode({ label: 'hydrated' }))
+hydrationHost.innerHTML = '<button data-testid="hydration-value">hydrated</button>'
+const hydrationButton = hydrationHost.querySelector('[data-testid="hydration-value"]')
+if (hydrationButton instanceof HTMLButtonElement) {
+  hydrationButton.addEventListener('click', () => {
+    ensureE2EState().hydrationNativeClicks += 1
+  })
+}
+document.body.appendChild(hydrationHost)
+
+appendControlButton('idle-flush', 'flush idle callbacks', () => {
+  const callbacks = Array.from(idleCallbacks.values())
+  idleCallbacks.clear()
+
+  const deadline: IdleDeadline = {
+    didTimeout: false,
+    timeRemaining: () => 50,
+  }
+
+  for (const callback of callbacks) {
+    callback(deadline)
+  }
+})
 
 appendControlButton('loader-inc', 'inc loader', () => {
   loaderCount += 1

@@ -4,6 +4,7 @@ interface E2EState {
   lifecycleMounts: number
   lifecycleUnmounts: number
   actionCalls: string[]
+  hydrationNativeClicks: number
 }
 
 async function readE2EState(page: Page): Promise<E2EState> {
@@ -14,6 +15,7 @@ async function readE2EState(page: Page): Promise<E2EState> {
         lifecycleMounts: 0,
         lifecycleUnmounts: 0,
         actionCalls: [],
+        hydrationNativeClicks: 0,
       }
     )
   })
@@ -79,6 +81,22 @@ test('visible strategy mounts when host enters viewport', async ({ page }) => {
   await expect(page.getByTestId('visible-strategy-value')).toHaveText('visible-mounted')
 })
 
+test('idle strategy mounts only after idle callback flush', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('idle-strategy-value')).toHaveCount(0)
+
+  await page.click('#idle-flush')
+  await expect(page.getByTestId('idle-strategy-value')).toHaveText('idle-mounted')
+})
+
+test('only strategy disables SSR marker on host', async ({ page }) => {
+  await page.goto('/')
+
+  const host = page.locator('[data-fict-react-client="only"]').first()
+  await expect(host).toHaveAttribute('data-fict-react-ssr', '0')
+  await expect(page.getByTestId('only-strategy-value')).toHaveText('only-mounted')
+})
+
 test('reactAction$ callback is materialized and invoked through reactify$', async ({ page }) => {
   await page.goto('/')
 
@@ -104,6 +122,17 @@ test('loader rebuilds runtime when qrl attribute changes', async ({ page }) => {
 
   await page.click('#loader-switch-qrl')
   await expect(page.getByTestId('loader-value')).toHaveText('ALT-loader:1')
+})
+
+test('loader hydrates pre-rendered SSR host and reuses existing DOM node', async ({ page }) => {
+  await page.goto('/')
+
+  const hydrationHost = page.locator('#hydration-loader-island')
+  await expect(hydrationHost).toHaveAttribute('data-fict-react-ssr', '1')
+  await expect(page.getByTestId('hydration-value')).toHaveText('hydrated')
+
+  await page.getByTestId('hydration-value').click()
+  await expect.poll(async () => (await readE2EState(page)).hydrationNativeClicks).toBe(1)
 })
 
 test('loader observer mounts added hosts and disposes removed hosts', async ({ page }) => {
