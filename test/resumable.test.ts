@@ -4,7 +4,7 @@ import { __fictDisableSSR, __fictEnableSSR } from '@fictjs/runtime/internal'
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { installReactIslands, reactAction$, reactify$ } from '../src'
+import { installReactIslands, reactAction$, reactify$, setReactModuleUrlPolicy } from '../src'
 import { encodePropsForAttribute } from '../src/serialization'
 import {
   __resetLoaderComponentModuleLoaderForTests,
@@ -58,6 +58,7 @@ afterEach(() => {
   runtimeHost.__FICT_DEV__ = undefined
   document.body.innerHTML = ''
   __fictDisableSSR()
+  setReactModuleUrlPolicy(null)
   __resetLoaderComponentModuleLoaderForTests()
   __resetResumableComponentModuleLoaderForTests()
 })
@@ -110,6 +111,44 @@ describe('reactify$', () => {
     expect(container.textContent).toContain('remote:2')
 
     dispose()
+  })
+
+  it('blocks resumable component module loads rejected by module URL policy', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    setReactModuleUrlPolicy((_resolvedUrl, kind) => kind !== 'component')
+
+    const Remote = reactify$<{ label: string; count: number }>({
+      module: fixtureModule,
+      export: 'LoaderComponent',
+      ssr: false,
+    })
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const dispose = render(
+      () => ({
+        type: Remote,
+        props: { label: 'blocked', count: 1 },
+      }),
+      container,
+    )
+    try {
+      await waitForExpectation(() => {
+        expect(consoleSpy).toHaveBeenCalled()
+      })
+
+      expect(container.textContent).not.toContain('blocked:1')
+      const blockedError = consoleSpy.mock.calls.find((call) => {
+        const candidate = call[1]
+        return candidate instanceof Error && candidate.message.includes('Blocked component module URL')
+      })
+      expect(blockedError).toBeTruthy()
+    } finally {
+      dispose()
+      consoleSpy.mockRestore()
+    }
   })
 
   it('renders SSR shell attributes and serialized props', () => {
@@ -397,6 +436,41 @@ describe('installReactIslands', () => {
 
     stop()
     expect(host.hasAttribute('data-fict-react-mounted')).toBe(false)
+  })
+
+  it('blocks loader component module loads rejected by module URL policy', async () => {
+    const fixtureModule = new URL('./fixtures/loader-component.ts', import.meta.url).href
+    setReactModuleUrlPolicy((_resolvedUrl, kind) => kind !== 'component')
+
+    const host = document.createElement('div')
+    host.setAttribute('data-fict-react', `${fixtureModule}#LoaderComponent`)
+    host.setAttribute('data-fict-react-client', 'load')
+    host.setAttribute('data-fict-react-ssr', '0')
+    host.setAttribute(
+      'data-fict-react-props',
+      encodePropsForAttribute({ label: 'loader-blocked', count: 1 }),
+    )
+    document.body.appendChild(host)
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const stop = installReactIslands()
+    try {
+      await waitForExpectation(() => {
+        expect(consoleSpy).toHaveBeenCalled()
+      })
+
+      expect(host.textContent).not.toContain('loader-blocked:1')
+      expect(host.getAttribute('data-fict-react-mounted')).not.toBe('1')
+
+      const blockedError = consoleSpy.mock.calls.find((call) => {
+        const candidate = call[1]
+        return candidate instanceof Error && candidate.message.includes('Blocked component module URL')
+      })
+      expect(blockedError).toBeTruthy()
+    } finally {
+      stop()
+      consoleSpy.mockRestore()
+    }
   })
 
   it('auto-disposes React roots when island hosts are removed from DOM', async () => {

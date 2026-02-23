@@ -153,6 +153,7 @@ const cleanup = installReactIslands({
 
 The loader uses `MutationObserver` to detect new island hosts and attribute changes. Updating `data-fict-react-props` on a mounted host triggers a React re-render. Changing the QRL (`data-fict-react`) disposes the old root and mounts a fresh one.
 When component module loading fails transiently, the loader also retries with the same bounded exponential backoff policy.
+In browser runtime, dynamic module URLs are same-origin restricted by default. Use `setReactModuleUrlPolicy(...)` to explicitly allow additional trusted sources.
 
 ### 6. Serializable Actions
 
@@ -183,6 +184,22 @@ const RemoteEditor = reactify$({
   actionProps: ['submitHandler', 'validateFn'],
 })
 ```
+
+### 7. Module URL Security Policy
+
+```ts
+import { setReactModuleUrlPolicy } from '@fictjs/react'
+
+setReactModuleUrlPolicy((resolvedUrl, kind) => {
+  if (kind === 'action') {
+    return resolvedUrl.startsWith('https://cdn.example.com/')
+  }
+
+  return resolvedUrl.startsWith('/') || resolvedUrl.startsWith('https://cdn.example.com/')
+})
+```
+
+Dynamic `component`/`action` imports are validated before loading. Keep this policy strict unless you fully trust the source.
 
 ## Client Strategies
 
@@ -256,6 +273,14 @@ Creates a serializable action ref from a module export. The ref is materialized 
 ### `reactActionFromQrl(qrl)`
 
 Creates an action ref from a raw QRL string.
+
+### `setReactModuleUrlPolicy(policy)`
+
+Sets a global predicate for dynamic module URL validation.
+
+- `policy(resolvedUrl, kind) => boolean`
+- `kind`: `'component'` or `'action'`
+- Pass `null` to restore the default policy
 
 ### `fictReactPreset(options?)`
 

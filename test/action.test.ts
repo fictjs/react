@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { setReactModuleUrlPolicy } from '../src'
 import {
   __resetReactActionCachesForTests,
   __setReactActionModuleLoaderForTests,
@@ -18,6 +19,7 @@ const tick = async (ms = 0) => {
 
 afterEach(() => {
   __resetReactActionCachesForTests()
+  setReactModuleUrlPolicy(null)
   vi.useRealTimers()
 })
 
@@ -140,6 +142,36 @@ describe('materializeReactProps', () => {
     expect(attempts).toBe(2)
     expect(actionCalls).toEqual(['third'])
 
+    consoleSpy.mockRestore()
+  })
+
+  it('blocks action module loads rejected by module URL policy', async () => {
+    const loaderSpy = vi.fn(async () => ({
+      run: () => {},
+    }))
+    __setReactActionModuleLoaderForTests(loaderSpy)
+    setReactModuleUrlPolicy((_resolvedUrl, kind) => kind !== 'action')
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const props = materializeReactProps({
+      onAction: reactActionFromQrl('/mock/module.js#run'),
+    })
+    const onAction = props.onAction as () => void
+
+    onAction()
+    await flushMicrotasks()
+
+    expect(loaderSpy).not.toHaveBeenCalled()
+    expect(consoleSpy).toHaveBeenCalledWith(
+      '[fict/react] Failed to execute React action.',
+      expect.any(Error),
+    )
+
+    const blockedError = consoleSpy.mock.calls.find((call) => {
+      const candidate = call[1]
+      return candidate instanceof Error && candidate.message.includes('Blocked action module URL')
+    })
+    expect(blockedError).toBeTruthy()
     consoleSpy.mockRestore()
   })
 })

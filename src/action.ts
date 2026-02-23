@@ -1,5 +1,6 @@
 import { __fictQrl } from '@fictjs/runtime/internal'
 
+import { assertReactModuleUrlAllowed } from './module-url-policy'
 import { parseQrl, resolveModuleUrl } from './qrl'
 import type { ReactActionRef } from './types'
 
@@ -91,6 +92,7 @@ async function invokeReactAction(qrl: string, args: unknown[]): Promise<void> {
   }
 
   const resolvedUrl = resolveModuleUrl(url)
+  assertReactModuleUrlAllowed(resolvedUrl, 'action')
   const mod = await loadActionModule(resolvedUrl)
   const candidate = (mod[exportName] ?? mod.default) as unknown
   if (typeof candidate !== 'function') {

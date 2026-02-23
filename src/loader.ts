@@ -13,6 +13,7 @@ import {
   DATA_FICT_REACT_SSR,
   DEFAULT_CLIENT_DIRECTIVE,
 } from './constants'
+import { assertReactModuleUrlAllowed } from './module-url-policy'
 import { normalizeMountEvents } from './mount-events'
 import { parseQrl, resolveModuleUrl } from './qrl'
 import { mountReactRoot, type MountedReactRoot } from './react-root'
@@ -136,6 +137,7 @@ async function loadComponentFromQrl(qrl: string): Promise<ComponentType<Record<s
   }
 
   const resolvedUrl = resolveModuleUrl(url)
+  assertReactModuleUrlAllowed(resolvedUrl, 'component')
   const mod = await loadLoaderComponentModule(resolvedUrl)
   const candidate = (mod[exportName] ?? mod.default) as unknown
 
