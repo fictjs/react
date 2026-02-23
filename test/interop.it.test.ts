@@ -94,15 +94,17 @@ describe('interop IT', () => {
     const shellHost = clientContainer.querySelector('#ssr-shell') as HTMLElement
     const stop = installReactIslands({ document })
 
-    await tick(20)
-    expect(shellHost.textContent).toContain('it:3')
+    await waitForExpectation(() => {
+      expect(shellHost.textContent).toContain('it:3')
+    })
 
     shellHost.setAttribute(
       'data-fict-react-props',
       encodePropsForAttribute({ label: 'it', count: 4 }),
     )
-    await tick(20)
-    expect(shellHost.textContent).toContain('it:4')
+    await waitForExpectation(() => {
+      expect(shellHost.textContent).toContain('it:4')
+    })
 
     stop()
   })

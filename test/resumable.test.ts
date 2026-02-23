@@ -102,13 +102,13 @@ describe('reactify$', () => {
     document.body.appendChild(container)
 
     const dispose = render(() => ({ type: App, props: {} }), container)
-    await tick(20)
-
-    expect(container.textContent).toContain('remote:1')
+    await waitForExpectation(() => {
+      expect(container.textContent).toContain('remote:1')
+    })
     ;(container.querySelector('#bump') as HTMLButtonElement).click()
-    await tick(20)
-
-    expect(container.textContent).toContain('remote:2')
+    await waitForExpectation(() => {
+      expect(container.textContent).toContain('remote:2')
+    })
 
     dispose()
   })
@@ -421,18 +421,18 @@ describe('installReactIslands', () => {
     document.body.appendChild(host)
 
     const stop = installReactIslands()
-    await tick(20)
-
-    expect(host.textContent).toContain('loader:5')
-    expect(host.getAttribute('data-fict-react-mounted')).toBe('1')
+    await waitForExpectation(() => {
+      expect(host.textContent).toContain('loader:5')
+      expect(host.getAttribute('data-fict-react-mounted')).toBe('1')
+    })
 
     host.setAttribute(
       'data-fict-react-props',
       encodePropsForAttribute({ label: 'loader', count: 6 }),
     )
-    await tick(20)
-
-    expect(host.textContent).toContain('loader:6')
+    await waitForExpectation(() => {
+      expect(host.textContent).toContain('loader:6')
+    })
 
     stop()
     expect(host.hasAttribute('data-fict-react-mounted')).toBe(false)
@@ -519,12 +519,14 @@ describe('installReactIslands', () => {
     document.body.appendChild(host)
 
     const stop = installReactIslands()
-    await tick(30)
-    expect(host.textContent).toContain('switch:1')
+    await waitForExpectation(() => {
+      expect(host.textContent).toContain('switch:1')
+    })
 
     host.setAttribute('data-fict-react', `${moduleB}#LoaderComponentAlt`)
-    await tick(30)
-    expect(host.textContent).toContain('ALT-switch:1')
+    await waitForExpectation(() => {
+      expect(host.textContent).toContain('ALT-switch:1')
+    })
 
     stop()
   })
@@ -550,8 +552,8 @@ describe('installReactIslands', () => {
 
     const stop = installReactIslands()
     try {
-      await tick(30)
-      ;(host.querySelector('#action-button') as HTMLButtonElement).click()
+      const actionButton = await waitForElement<HTMLButtonElement>(host, '#action-button')
+      actionButton.click()
       await waitForExpectation(() => {
         expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['clicked:loader'])
       })
@@ -585,8 +587,11 @@ describe('installReactIslands', () => {
 
     const stop = installReactIslands()
     try {
-      await tick(30)
-      ;(host.querySelector('#custom-action-button') as HTMLButtonElement).click()
+      const customActionButton = await waitForElement<HTMLButtonElement>(
+        host,
+        '#custom-action-button',
+      )
+      customActionButton.click()
       await waitForExpectation(() => {
         expect(actionHost.__FICT_REACT_ACTION_CALLS__).toEqual(['custom:loader-option'])
       })
