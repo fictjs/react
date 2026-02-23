@@ -90,6 +90,25 @@ describe('materializeReactProps', () => {
     expect(typeof result.onAction).toBe('function')
   })
 
+  it('evicts oldest cached action handlers after cache limit is exceeded', () => {
+    const firstQrl = '/mock/first-module.js#run'
+    const firstMaterialized = materializeReactProps({
+      onAction: reactActionFromQrl(firstQrl),
+    })
+    const firstHandler = firstMaterialized.onAction
+
+    for (let index = 0; index < 600; index += 1) {
+      materializeReactProps({
+        onAction: reactActionFromQrl(`/mock/module-${index}.js#run`),
+      })
+    }
+
+    const rematerialized = materializeReactProps({
+      onAction: reactActionFromQrl(firstQrl),
+    })
+    expect(rematerialized.onAction).not.toBe(firstHandler)
+  })
+
   it('ignores legacy-looking objects when additional keys are present', () => {
     const legacyLike = {
       __fictReactAction: '/mock/module.js#run',

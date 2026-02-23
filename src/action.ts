@@ -11,6 +11,7 @@ const LEGACY_ACTION_QRL_KEY = '__fictReactAction'
 const ACTION_PROP_PATTERN = /^on[A-Z]/
 const RETRY_BASE_DELAY_MS = 100
 const RETRY_MAX_DELAY_MS = 5_000
+const ACTION_HANDLER_CACHE_MAX_ENTRIES = 500
 
 const moduleCache = new Map<string, Promise<Record<string, unknown>>>()
 const moduleRetryState = new Map<string, { failures: number; nextRetryAt: number }>()
@@ -118,6 +119,12 @@ function toActionHandler(qrl: string): (...args: unknown[]) => void {
     })
   }
 
+  if (actionHandlerCache.size >= ACTION_HANDLER_CACHE_MAX_ENTRIES) {
+    const oldestKey = actionHandlerCache.keys().next().value as string | undefined
+    if (oldestKey) {
+      actionHandlerCache.delete(oldestKey)
+    }
+  }
   actionHandlerCache.set(qrl, handler)
   return handler
 }
